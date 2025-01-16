@@ -322,18 +322,21 @@ class Question:
                 break  # if here, a version was found
             
             if version is None:
-                print('--VERSION GENERATION FAILED--')
-                print(f'Failed to generate a satisfactory version in {attempts} attempts.')
-                print('Consider increasing the maximum number of attempts or adjusting problem parameters.')
+                display(HTML('<b><font color="DC143C" size=5>--VERSION GENERATION FAILED--</font></b>'))
+                #print(f'Failed to generate a satisfactory version in {attempts} attempts.')
+                print(f'Failed to generated version number {len(self.versions) +1}.')
                 print(f'{len(self.versions)} versions successfully generated.')
+                print('Consider increasing the maximum number of attempts or adjusting problem parameters.')
+                print()
+                _ = input('Press Enter to continue.')
                 return 
             
             # Add version to list
             self.versions.append(version)
                 
-        
-        display(HTML('<b>Generating Versions</b>'))
-        print(f'{generation_attempts} attempts were required to generate {n} versions. {duplicates_encountered} duplicate versions were generated and discarded.\n')
+        print()
+        display(HTML('<b><font size=5>Versions Generated</font></b>'))
+        print(f'{generation_attempts} attempts were required to generate {n} versions. {duplicates_encountered} duplicate versions were generated and discarded.\n\n')
         
 
     def generate_one(self, testing_level=0, verbose=False):
@@ -387,16 +390,15 @@ class Question:
         if limit is None: limit = len(self.versions) 
         limit = min(limit, len(self.versions))
         
-        display(HTML('<b>Displaying Versions</b><br /><br />'))
+        display(HTML('<b><font size=5>Displaying Versions</font></b>'))
         
         for i in range(limit):
             text = self.versions[i]['text']
             answer_options = self.versions[i]['answer_options']
             
-            display(HTML(f'<hr><b>Version {i+1}</b>'))
+            display(HTML(f'<hr><b><font size=4>Version {i+1}</font></b>'))
             display(Markdown(f'<font size="{size}">{text}</font>'))
             display(HTML('<b>Answer Options</b>'))
-            print()
             
             #-----------------------------------------------
             # Display Answers
@@ -404,27 +406,31 @@ class Question:
             
             # Multiple Choice
             if self.type == 'MC':
-                if compact_answers:
-                    print(answer_options)
-                else:
-                    letters = list('abcdefghijklmnopqrstuvwzyz')
-                    for i, ao in enumerate(answer_options):
-                        x = letters[i]
-                        #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
-                        display(Markdown(f'`[{x}]` {ao}' if i==0 else f'`({x})` {ao}'))
+                
+                letters = list('abcdefghijklmnopqrstuvwzyz')
+                out = ''
+                for i, ao in enumerate(answer_options):
+                    x = letters[i]
+                    #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
+                    out += f'[{x}] {ao}' if i==0 else f'({x}) {ao}'
+                    out += '     ' if compact_answers else '\n'
+                out = out.strip('\n')
+                print(out)
                         
             # Multiple Answer
             elif self.type == 'MA':
-                if compact_answers:
-                    print(answer_options)
-                else:
-                    for i, ao in enumerate(answer_options):
-                        #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
-                        ao_mod = ao
-                        if ao_mod[:3] == '[ ]': ao_mod = '`[ ]`' + ao_mod[3:]
-                        elif ao_mod[:3] == '[X]': ao_mod = '`[X]`' + ao_mod[3:]
-                            
-                        display(Markdown(f'{ao_mod}'))
+                
+                out = ''
+                for i, ao in enumerate(answer_options):
+                    #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
+                    ao_mod = ao
+                    if ao_mod[:3] == '[ ]': ao_mod = '[ ]' + ao_mod[3:]
+                    elif ao_mod[:3] == '[X]': ao_mod = '[X]' + ao_mod[3:]
+                    
+                    out += f'{ao_mod}'
+                    out += '     ' if compact_answers else '\n'
+                out = out.strip('\n')
+                print(out)
                 
             # Numerical
             elif self.type == 'NUM':
