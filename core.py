@@ -322,6 +322,7 @@ class Question:
                 break  # if here, a version was found
             
             if version is None:
+                print()
                 display(HTML('<b><font color="DC143C" size=5>--VERSION GENERATION FAILED--</font></b>'))
                 #print(f'Failed to generate a satisfactory version in {attempts} attempts.')
                 print(f'Failed to generated version number {len(self.versions) +1}.')
@@ -329,6 +330,7 @@ class Question:
                 print('Consider increasing the maximum number of attempts or adjusting problem parameters.')
                 print()
                 _ = input('Press Enter to continue.')
+                print()
                 return 
             
             # Add version to list
@@ -396,7 +398,7 @@ class Question:
             text = self.versions[i]['text']
             answer_options = self.versions[i]['answer_options']
             
-            display(HTML(f'<hr><b><font size=4>Version {i+1}</font></b>'))
+            display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></p></b>'))
             display(Markdown(f'<font size="{size}">{text}</font>'))
             display(HTML('<b>Answer Options</b>'))
             
