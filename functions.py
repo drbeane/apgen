@@ -281,7 +281,7 @@ def QUAD(a, b, c):
 
 def TABLE(contents, config=None):
 
-    default_config = {'cw':50, 'ch':20, 'sr1':True, 'sc1':True, 'align':'C'}
+    default_config = {'cw':50, 'ch':30, 'sr1':True, 'sc1':True, 'align':'C'}
     if config == None: config = {}
     for k,v in default_config.items():
         if k not in config.keys():
@@ -289,7 +289,7 @@ def TABLE(contents, config=None):
         
     
     t = '<table style="border:1px solid black;  border-spacing:0px; border-collapse: collapse; '
-    t += 'background-color:#FFFFFF; ; margin: 0px 0px 20px 0px;"">\n'
+    t += 'background-color:#FFFFFF; margin: 0px 0px 15px 0px;">\n'
     t += '<tbody>\n'
     for i, row in enumerate(contents):
         # Determine height

@@ -151,18 +151,18 @@ class makeQTI():
 
             for n, version in enumerate(self.q.versions):
                 
-                version['text'] = self.processEquations_NEW(version['text'])
+                version['text'] = self.process_equations(version['text'])
                 for i,ao in enumerate(version['answer_options']):
                     version['answer_options'][i] = self.processEquations(ao)
                 
                 if display_versions is not None and n < display_versions:
                     display(HTML(f'<b>Version {n+1}'))
                     print(version)
+                    
                 self.qPts = '1'
                 # advance the count and initialize things
                 self.qNumber= n+1
                 self.htmlText=''
-                
                 
                 self.cur_version = version
                 
@@ -408,8 +408,8 @@ class makeQTI():
                 right_answers[f'right{Rn}'] = {'text' : Rans}
                 Rn += 1
             
-            #print(f'{left_prompts = }')
-            #print(f'{right_answers = }\n')
+            #print(f'{left_prompts = }')       #🟡🟡🟡🟡
+            #print(f'{right_answers = }\n')    #🟡🟡🟡🟡
             
             question = self.processFormatting(question)
             # make an identifier for the question
@@ -417,7 +417,6 @@ class makeQTI():
             
             # build the question text
             questionTextStart = self.questionText(question, itid)
-            
             questionTextResponse = self.questionTextResponses_MT(left_prompts, right_answers)
             self.writeText = questionTextStart + questionTextResponse
             
@@ -1258,7 +1257,55 @@ class makeQTI():
             
             return output
         
+        def process_equations(self, text):
+            
+            # Replace $$...$$
+            while True:
+                if text.count('$$') < 2:
+                    break
+                i = text.index('$$')        # Find index of 1st $$
+                j = text.index('$$', i+1)   # Find index of 2nd $$
+                
+                eqn_text = text[i+2:j]
+                
+                # Not sure what this stuff is for, reall. 
+                neweq = urllib.parse.quote(eqn_text)
+                neweq = neweq.replace('%', '%25')
+                
+                new_text =  f'<img class="equation_image" title="{eqn_text}" '
+                new_text += f'src="/equation_images/{neweq}?scale=1" alt="LaTeX: {eqn_text}" '
+                new_text += f'data-equation-content="{eqn_text}" data-ignore-a11y-check="">'
+
+                text = text[:i] + new_text + text[j+2:]
+                
+            # Replace $...$
+            while True:
+                if text.count('$') < 2:
+                    break
+                i = text.index('$')        # Find index of 1st $$
+                j = text.index('$', i+1)   # Find index of 2nd $$
+                
+                eqn_text = text[i+1:j]
+                
+                # Not sure what this stuff is for, reall. 
+                neweq = urllib.parse.quote(eqn_text)
+                neweq = neweq.replace('%', '%25')
+                
+                new_text =  f'<img class="equation_image" title="{eqn_text}" '
+                new_text += f'src="/equation_images/{neweq}?scale=1" alt="LaTeX: {eqn_text}" '
+                new_text += f'data-equation-content="{eqn_text}" data-ignore-a11y-check="">'
+
+                text = text[:i] + new_text + text[j+1:]
+            
+            return text
+            
+        
         def processEquations_NEW(self, text):
+            
+            temp = text.split('</p>')[0]    # 🟡🟡🟡🟡
+            print('BEFORE')
+            print(temp, '\n')
+            
             # recieves a question block (a list of lines)
             # go through each line looking for $$...$$
             
@@ -1269,6 +1316,12 @@ class makeQTI():
                 #fullData[i] = fullData[i].replace('<', r'\lt')
                 #fullData[i] = fullData[i].replace('>', r'\gt')
                 text = re.sub(r'\$(.*)\$', self.processEquation, text, re.M)
+            
+            temp = text.split('</p>')[0]    # 🟡🟡🟡🟡
+            print('AFTER')
+            print(temp, '\n')
+            
+            
             return text
             
         def processEquations(self, fullData):
@@ -1291,6 +1344,9 @@ class makeQTI():
             #&lt;p&gt;&lt;img class="equation_image" title="\frac{5}{2}" src="https://longwood.instructure.com/equation_images/%255Cfrac%257B5%257D%257B2%257D" alt="LaTeX: \frac{5}{2}" data-equation-content="\frac{5}{2}"&gt;&lt;/p&gt;
             # use regex to extract info between $$
             eqtext = eq.group(1)
+            
+            print(eqtext, '\n')    # 🟡🟡🟡🟡
+            
             # need to convert symbols in equation to url symbols
             neweq = urllib.parse.quote(eqtext)
             # need to add the odd %25 to each encoded character

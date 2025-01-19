@@ -124,14 +124,63 @@ class Question:
             #-----------------------------------------------
             elif mode == '#---ANSWER_OPTIONS---#':
                 self.answer_options.append(line)
-  
+                
+
+
+    def parse_text_NEW(self, text_raw):
+        lines = text_raw.split('\n')
+        mode = 'start'
+        
+        new_text = ''
+        
+        for line in lines:
+            prev_mode = mode
+            
+            #---------------------------------------
+            # Determine new mode
+            #---------------------------------------
+            stripped = line.strip(' ')
+            if stripped == '':
+                mode = 'blank'
+            elif stripped == 'TABLE' or mode == 'table':    
+                mode = 'table'
+            elif stripped[0] == '*':
+                mode = 'list'
+            elif stripped[0] == '$' and stripped[-1] == '$':
+                mode = 'eqn'
+            else:
+                mode = 'text'
+            
+            
+            if mode == 'blank':
+                cur_sec['blanks'] += 1
+                
+            else:
+                # Append content if mode has not changed
+                # Also start a new component for equations. 
+                if prev_mode == mode and mode != 'eqn':
+                    cur_sec['lines'].append(line)
+                
+                # If mode has changed, start a new component. 
+                else:
+                    cur_sec['next'] = mode
+                    old_mode = cur_sec['mode']
+                    sections.append(cur_sec)
+                    cur_sec = {'mode':mode, 'prev':old_mode, 'next':None, 'lines':[line], 'blanks':0}
+            
+            if stripped == 'END TABLE':
+                mode = None
+    
+        
+        return text
+        
 
     def parse_text(self):
         self.text_raw = self.text_raw.strip()
         
         sections = []
         
-        cur_sec = {'mode':'text', 'prev':None, 'next':None, 'lines':[]}
+        cur_sec = {'mode':'text', 'prev':None, 'next':None, 'lines':[], 'blanks':0}
         
         mode = 'text'
         
@@ -155,84 +204,83 @@ class Question:
                 mode = 'text'
             
             
-            #if mode == 'blank':
-            #    cur_sec['blanks'] += 1
-            #else:
+            if mode == 'blank':
+                cur_sec['blanks'] += 1
             
-            # Append content if mode has not changed
-            # Also start a new component for equations. 
-            if prev_mode == mode and mode != 'eqn':
-                cur_sec['lines'].append(line)
-            
-            # If mode has changed, start a new component. 
             else:
-                cur_sec['next'] = mode
-                old_mode = cur_sec['mode']
-                sections.append(cur_sec)
-                cur_sec = {'mode':mode, 'prev':old_mode, 'next':None, 'lines':[line]}
+                # Append content if mode has not changed
+                # Also start a new component for equations. 
+                if prev_mode == mode and mode != 'eqn':
+                    cur_sec['lines'].append(line)
+                
+                # If mode has changed, start a new component. 
+                else:
+                    cur_sec['next'] = mode
+                    old_mode = cur_sec['mode']
+                    sections.append(cur_sec)
+                    cur_sec = {'mode':mode, 'prev':old_mode, 'next':None, 'lines':[line], 'blanks':0}
             
             if stripped == 'END TABLE':
                 mode = None
        
-        
         sections.append(cur_sec)
     
         for s in sections:
-            #print(s)
             temp = s.copy()
             temp['lines'] = len(temp['lines'])
             #print(temp)
 
         text = ''
         for s in sections:
-            text += self.process_section(s)
+            text += self.process_section(s, 'new')
         
         self.text = text
         
         
-    def process_section(self, s):
+
+    def process_section(self, s, output='new'):
         text = ''
+        
+        N = s['blanks']
         
         if s['mode'] == 'text':
             # Start new paragraph, if needed
             if s['prev'] != 'text':
-                text += '<p style="margin: 0px 0px 10px 0px;">'
+                text += '<p style="margin: 0px 0px 12px 0px;">'
                 
             # Glue lines together. 
             for line in s['lines']:
                 text += line.strip(' ') + ' '
             
             # Close paragraph
-            text = text.strip()
-            text += '</p>\n'
-        
-        elif s['mode'] == 'blank':
-            n = len(s['lines'])
-            if n > 1:
-                text += f'<div style="height: {10*(n-1)}px;">&nbsp;</div>\n'
+            K = 0 if (N <= 1 or s['next'] is None) else N
+            text += '\n' + '<br/>' * K + '</p>\n'
             
+        
         elif s['mode'] == 'list':
+            # Start list
             text += '<ul>\n'
             
             # Add list items
             for line in s['lines']:
                 line = line[1:].strip(' ')
-                text += f'    <li style="margin-bottom: 5px">{line}</li>\n'
+                text += f'    <li>{line}</li>\n'
             
             # End list
             text += '</ul>\n'
+            text += blank_lines(N-1)
             
         elif s['mode'] == 'eqn':
-            #K = 0 if (N <= 1 or s['next'] is None) else N
-            #bp = '<br/>' * K
+            K = 0 if (N <= 1 or s['next'] is None) else N
+            bp = '<br/>' * K
             
             for line in s['lines']:  # There should always be only one line in an EQN section. 
                 if line[:2] == '$$':
-                    text += f'<p style="text-align: center; margin: 0px 0px 10px 0px;">{line}</p>\n'
+                    text += f'<p style="text-align: center; margin: 0px 0px 12px 0px;">{line}{bp}</p>\n'
                 elif line[:4] == '    ':
-                    text += f'<p style="padding-left:40px; margin: 0px 0px 10px 0px;">{line}</p>\n'
+                    text += f'<p style="padding-left:40px; margin: 0px 0px 12px 0px;">{line}{bp}</p>\n'
                 else:
-                    text += f'<p margin: 0px 0px 10px 0px;>{line}</p>\n'
+                    text += f'<p margin: 0px 0px 12px 0px;>{line}{bp}</p>\n'
         
         elif s['mode'] == 'table':
             
@@ -253,6 +301,8 @@ class Question:
                 table_config[p.lower()] = v
             
             text += TABLE(table_contents, table_config)
+            text += blank_lines(N-1)
+
 
         return text
         
@@ -457,17 +507,18 @@ class Question:
         from apgen.qti_convert import makeQTI
         import os
         
-        # Get the contents of the save directory. 
         if overwrite == False:
-            contents = os.listdir(path)
-            contents = [x for x in contents if '.zip' in x]
-            conflicts = [x for x in contents if self.id in x]
+            folders = os.listdir(path)
+            #folders = [x for x in folders if '.zip' in x]
+            #folders = [x for x in folders if self.id in x]
             nums = [0]
-            for x in conflicts:
+            for x in folders:
+                if '.zip' not in x:
+                    continue
                 n = x.replace(self.id, '').replace('_export.zip', '').replace('_v', '') 
                 if n != '':
                     nums.append(int(n))
-                
+                    
             self.id = self.id + f'_v{max(nums)+1:02}'
         
         convertor = makeQTI(self, path=path, shuffle=shuffle)
