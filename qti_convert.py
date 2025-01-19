@@ -1104,6 +1104,7 @@ class makeQTI():
               
             
         def questionTextResponses(self, answers, corr):
+            corr = [str(x) for x in corr]
             # set some strings based on question type
             if self.questionType == 'MC':
                 respid = 'response1'
