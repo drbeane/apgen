@@ -313,8 +313,6 @@ class Question:
                 print(f'{len(self.versions)} versions successfully generated.')
                 print('Consider increasing the maximum number of attempts or adjusting problem parameters.')
                 print()
-                _ = input('Press Enter to continue.')
-                print()
                 return 
             
             # Add version to list

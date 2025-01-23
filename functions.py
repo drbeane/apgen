@@ -20,7 +20,6 @@ def RANGE(start, stop, step, exclude=None, repeat=True, shape=None,
         # Build list of options
         options = np.arange(start, stop+step, step).round(10).tolist()
         #options = [ROUND(o,nearest=step) for o in options]
-        print(options)
         
         if exclude is not None:
             options = [v for v in options if v not in exclude]
