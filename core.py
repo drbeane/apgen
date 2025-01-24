@@ -504,7 +504,8 @@ def evaluate_and_format_var(x, scope):
     # Need to re-round values if evaluating an expression
     var_name = tokens[0]
     value = eval(var_name, scope)  
-    value = round(value, 12)  
+    if type(value) == float:
+        value = round(value, 12)  
     
     
     # Return if there is no format string
