@@ -40,6 +40,7 @@ class Question:
             if id is None:
                 filename = file.split('/')[-1]
                 self.id = filename.split('.')[0]
+        self.qt = self.qt.strip()
 
         # Parse the template and text
         self.parse_template()
@@ -430,7 +431,7 @@ class Question:
             from apgen.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
            
-    def generate_qti(self, path='', overwrite=True, shuffle=True, display_versions=None):
+    def generate_qti(self, path='', overwrite=True, shuffle=True, display_versions=None, save_template=False):
         from apgen.qti_convert import makeQTI
         import os
         
@@ -449,6 +450,11 @@ class Question:
         
         convertor = makeQTI(self, path=path, shuffle=shuffle)
         convertor.run(display_versions=display_versions)
+        
+        if save_template:
+            with open(f'{path}/{self.id}.txt', 'w') as f:
+                f.write(self.qt)
+        
         print('QTI file created successfully')
         
       

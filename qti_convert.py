@@ -201,7 +201,7 @@ class makeQTI():
             shutil.make_archive(str(self.newDirPath), 'zip', str(self.newDirPath))
             #remove the now compressed folder
             import time
-            time.sleep(1)
+            time.sleep(2)
             shutil.rmtree(str(self.newDirPath), ignore_errors=False)
             
 
@@ -426,16 +426,18 @@ class makeQTI():
             question = self.cur_version['text']
             raw_answer = self.cur_version['answer_options'][0]
             
-            
+            answer = raw_answer
+            margin = '0'
             if '+/-' in raw_answer:
                 answer, margin = raw_answer.split('+/-')
+            
             answer = answer.strip()
             margin = margin.strip()
             
             if '%' in margin:
                 perc = float(margin.replace('%', '')) / 100
                 margin = str(float(answer) * perc)
-                
+          
             question = self.processFormatting(question)
             itid = str(self.questionType) + str(self.qNumber)
             
