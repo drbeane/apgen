@@ -560,7 +560,29 @@ def evaluate_and_format_var(x, scope):
     return formatted_value
 
 
+def process_template(qt, num_versions, num_to_display, compact_answers, generate_qti, save_template, shuffle_answers):
+    from google.colab import files
+    import os
+    
+    q = Question(qt=qt)
+    q.generate(n=num_versions)
+    q.display_versions(limit=num_to_display, compact_answers=True)
 
+    
+    if not os.path.exists('output/'):
+        os.mkdir('output/')
+
+    if generate_qti:
+        q.generate_qti(path='output/', shuffle=shuffle_answers)
+        files.download(f'output/{q.id}_export.zip')
+
+    if save_template:
+        fname = f'output/{q.id}.txt'
+        with open(fname, 'w') as f:
+            f.write(q.qt)
+        files.download(fname)
+
+    return q
 
 def DISPLAY_DELETE(x, scope):
     print(x)
