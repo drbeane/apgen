@@ -279,7 +279,7 @@ def QUAD(a, b, c):
     return x1, x2
 
 
-def TABLE(contents, config=None):
+def TABLE_OLD(contents, config=None):
 
     default_config = {'cw':50, 'ch':30, 'sr1':True, 'sc1':True, 'align':'C'}
     if config == None: config = {}
@@ -327,9 +327,9 @@ def TABLE(contents, config=None):
 
 
 
-def TABLE_NEW(contents, row_labels=None, col_labels=None, config=None):
+def TABLE(contents, config=None, rlab=None, clab=None):
 
-    default_config = {'cw':50, 'ch':20, 'sr1':True, 'sc1':True, 'align':'C'}
+    default_config = {'cw':50, 'ch':30, 'sr1':True, 'sc1':True, 'align':'C'}
     if config == None: config = {}
     for k,v in default_config.items():
         if k not in config.keys():
@@ -341,17 +341,67 @@ def TABLE_NEW(contents, row_labels=None, col_labels=None, config=None):
     t += '<tbody>\n'
     
     
+    if rlab is None: rlab = []
+    if clab is None: clab = []
+    rlab = np.array(rlab).reshape((-1,1))
+    clab = np.array(clab).reshape((1,-1))
+    #row_labels = np.array([]) if row_labels is None else np.array(row_labels).reshape((-1,1))
+    #col_labels = np.array([]) if col_labels is None else np.array(col_labels).reshape((1,-1))
+    contents = np.array(contents)
+    if contents.ndim == 1:
+        contents = contents.reshape([1,-1])
+    
+    # Assert something about the dimensions
+    n_row = contents.shape[0]
+    n_col = contents.shape[1]
+    b1 = (rlab.size == 0) and (clab.size == 0)
+    b2 = (rlab.size == 0) and (clab.size == n_col)
+    b3 = (rlab.size == n_row) and (clab.size == 0)
+    b4 = (rlab.size == n_row) and (clab.size == n_col)
+    b5 = (rlab.size == n_row) and (clab.size == n_col+1)
+    b6 = (rlab.size == n_row+1) and (clab.size == n_col)
+    msg = f'Size mismatch: contents={contents.shape}, rlab={rlab.size}, clab={clab.size}'
+    assert (b1 or b2 or b3 or b4 or b5 or b6), msg
+    
+    # Step 1  (b3, b4, b5)
+    row_labels_added = False
+    if rlab.shape[0] == contents.shape[0]:
+        contents = np.hstack([rlab, contents])
+        row_labels_added = True
+    
+    # Step 2 (b4)
+    if clab.shape[1] == contents.shape[1] - 1:
+        clab = np.hstack([[['']], clab])
+     
+    # Step 3 (b2, b4, b5, b6)
+    if clab.shape[1] == contents.shape[1]:
+        contents = np.vstack([clab, contents])
+        
+    # Step 4 (b6)
+    if len(rlab) == contents.shape[0] and row_labels_added == False:
+        contents = np.hstack([rlab, contents])
+    
+    
+    
     # Fold labels into contents:
     # Current assumes that upper right cell belows to row labels
-    new_contents = contents.copy()
-    if col_labels is not None:
-        new_contents.insert(0, col_labels)
-    if row_labels is not None:
-        for i, rl in enumerate(row_labels):
-            new_contents[i].insert(0,rl)
-        
+    #new_contents = contents.copy()
+    #if col_labels is not None:
+    #    new_contents.insert(0, col_labels)
+    #if row_labels is not None:
+    #   for i, rl in enumerate(row_labels):
+    #        new_contents[i].insert(0,rl)
+
     
-    for i, row in enumerate(new_contents):
+    
+    
+    
+    
+    
+    # -----------------------------------------
+    # Add contents
+    # -----------------------------------------
+    for i, row in enumerate(contents):
         # Determine height
         temp = config['ch']
         ch = temp[i] if type(temp) == list else temp
@@ -435,7 +485,7 @@ def GEOM_ANNUITY_FV(n, i, g, P, due=False):
     fv = pv * (1+i)**n
     return fv
     
-def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None):
+def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None, max_iter=10000):
     none_count = 0
     if N is None: none_count += 1
     if I is None: none_count += 1
@@ -455,11 +505,16 @@ def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None):
             bot = -PMT + N*x*PMT*v**(N+1) + PMT*v**N - N*FV*x**2*v**(N+1)
             return x - top/bot
         
-        while True:
+        for i in range(max_iter):
             old_x = x
             x = new_x(x)
             if abs(x - old_x) < 0.000000000001:
                 break
+        
+        if i == max_iter-1:
+            print('TVM_SOLVER failed to converge!')
+            return None
+            
         return x
     
     v = 1 / (1 + I)    

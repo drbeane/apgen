@@ -356,11 +356,13 @@ class Question:
         return version_dict
 
 
-    def display_versions(self, size=3, limit=None, compact_answers=False, colab=False):
+    def display_versions(self, size=3, limit=None, compact_answers=False):
         from IPython.display import HTML, display, Markdown, Latex, Javascript
+        import sys
+        COLAB = 'google.colab' in sys.modules
         
         # This is a hack used to fix display in Colab
-        if colab:
+        if COLAB:
             display(Latex(""))
         
         if len(self.versions) == 0:
@@ -377,7 +379,7 @@ class Question:
             answer_options = self.versions[i]['answer_options']
             
             display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></p></b>'))
-            display(Markdown(f'<font size="{size}">{text}</font>'))
+            display(HTML(f'<font size="{size}">{text}</font>'))
             display(HTML('<b>Answer Options</b>'))
             
             #-----------------------------------------------
@@ -427,7 +429,7 @@ class Question:
         display(HTML('<hr>'))
         
         # This is a hack used to fix display in Colab
-        if colab: 
+        if COLAB: 
             from apgen.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
            

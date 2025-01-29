@@ -201,7 +201,7 @@ class makeQTI():
             shutil.make_archive(str(self.newDirPath), 'zip', str(self.newDirPath))
             #remove the now compressed folder
             import time
-            time.sleep(2)
+            time.sleep(3)
             shutil.rmtree(str(self.newDirPath), ignore_errors=False)
             
 
@@ -1097,9 +1097,11 @@ class makeQTI():
                     </material>
                 '''
             else:
+                # Old piece: <mattext texttype="text/html">&lt;div&gt;&lt;p&gt;{quest}&lt;/p&gt;&lt;/div&gt;</mattext>
+                
                 out1 += f'''<presentation>
                   <material>
-                      <mattext texttype="text/html">&lt;div&gt;&lt;p&gt;{quest}&lt;/p&gt;&lt;/div&gt;</mattext>
+                      <mattext texttype="text/html">{quest}</mattext>
                   </material>
                   '''
             return out1    
