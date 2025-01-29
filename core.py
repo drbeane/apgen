@@ -239,7 +239,7 @@ class Question:
                     v = eval(v)
                 table_config[p.lower()] = v
             
-            text += TABLE(table_contents, table_config)
+            text += TABLE(contents=table_contents, config=table_config, include_br=False)
 
         return text
         
@@ -378,7 +378,7 @@ class Question:
             text = self.versions[i]['text']
             answer_options = self.versions[i]['answer_options']
             
-            display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4.5>Version {i+1}</font></b><br/><br/></p>'))
+            display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b><br/><br/></p>'))
             display(HTML(f'<font size="{size}">{text}</font><br/>'))
             display(HTML('<b><font size=4>Answer Options</font></b>'))
             
@@ -561,7 +561,7 @@ def evaluate_and_format_var(x, scope):
 
 
 def process_template(qt, num_versions, num_to_display, compact_answers, generate_qti, save_template, shuffle_answers):
-    from google.colab import files
+    from google.colab import files # type: ignore
     import os
     
     q = Question(qt=qt)
