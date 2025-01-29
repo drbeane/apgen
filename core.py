@@ -560,7 +560,7 @@ def evaluate_and_format_var(x, scope):
     return formatted_value
 
 
-def process_template(qt, num_versions, num_to_display, compact_answers, generate_qti, save_template, shuffle_answers):
+def process_template(qt, num_versions, num_to_display, compact_answers, generate_qti, save_template, shuffle_answers, attempts=1000):
     from google.colab import files # type: ignore
     import os, sys
     from IPython.display import display, Javascript
@@ -569,7 +569,7 @@ def process_template(qt, num_versions, num_to_display, compact_answers, generate
         display(Javascript('''google.colab.output.setIframeHeight(0, true, {maxHeight: 5000})'''))
     
     q = Question(qt=qt)
-    q.generate(n=num_versions)
+    q.generate(n=num_versions, attempts=attempts)
     q.display_versions(limit=num_to_display, compact_answers=True)
     
     
