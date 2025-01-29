@@ -327,7 +327,7 @@ def TABLE_OLD(contents, config=None):
 
 
 
-def TABLE(contents, config=None, rlab=None, clab=None, include_br=True):
+def TABLE(contents, config=None, rlab=None, clab=None, inc_margin=True):
 
     default_config = {'cw':50, 'ch':30, 'sr1':True, 'sc1':True, 'align':'C'}
     if config == None: config = {}
@@ -335,9 +335,9 @@ def TABLE(contents, config=None, rlab=None, clab=None, include_br=True):
         if k not in config.keys():
             config[k] = v
         
-    t = '<br/>\n' if include_br else ''  
-    t += '<table style="border:1px solid black;  border-spacing:0px; border-collapse: collapse; '
-    t += 'background-color:#FFFFFF; ; margin: 0px 0px 20px 0px;"">\n'
+    tm = 10 if inc_margin else 0
+    t = '<table style="border:1px solid black;  border-spacing:0px; border-collapse: collapse; '
+    t += f'background-color:#FFFFFF; ; margin: {tm}px 0px 20px 0px;"">\n'
     t += '<tbody>\n'
     
     
