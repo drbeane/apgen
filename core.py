@@ -378,9 +378,9 @@ class Question:
             text = self.versions[i]['text']
             answer_options = self.versions[i]['answer_options']
             
-            display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></p></b>'))
+            display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b></p></b>'))
             display(HTML(f'<font size="{size}">{text}</font><br/>'))
-            display(HTML('<b><font size=5>Answer Options</font></b>'))
+            display(HTML('<b><font size=4>Answer Options</font></b>'))
             
             #-----------------------------------------------
             # Display Answers
