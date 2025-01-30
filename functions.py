@@ -341,8 +341,12 @@ def TABLE(contents, config=None, rlab=None, clab=None, inc_margin=True):
         new_config = {}
         tokens = config.split(';')
         for t in tokens:
-            k,v = tokens.strip().split(':')
-            new_config[k.strip()] = v.strip()
+            k,v = t.strip().split(':')
+            k = k.strip()
+            v = v.strip()
+            if v == 'False': v = False
+            if v == 'True': v = True
+            new_config[k] = v
         config = new_config
 
     default_config = {'cw':50, 'ch':30, 'sr1':True, 'sc1':True, 'align':'C'}
