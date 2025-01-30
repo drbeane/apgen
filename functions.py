@@ -337,6 +337,14 @@ def TABLE_OLD(contents, config=None):
 
 def TABLE(contents, config=None, rlab=None, clab=None, inc_margin=True):
 
+    if type(config) == str:
+        new_config = {}
+        tokens = config.split(';')
+        for t in tokens:
+            k,v = tokens.strip().split(':')
+            new_config[k.strip()] = v.strip()
+        config = new_config
+
     default_config = {'cw':50, 'ch':30, 'sr1':True, 'sc1':True, 'align':'C'}
     if config == None: config = {}
     for k,v in default_config.items():
