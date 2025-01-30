@@ -566,7 +566,7 @@ def process_template(qt, num_versions, num_to_display, compact_answers, generate
     from IPython.display import display, Javascript
     
     if 'google.colab' in sys.modules:
-        display(Javascript('''google.colab.output.setIframeHeight(0, true, {maxHeight: 5000})'''))
+        display(Javascript('''google.colab.output.setIframeHeight(0, true, {maxHeight: 10000})'''))
     
     q = Question(qt=qt)
     q.generate(n=num_versions, attempts=attempts)

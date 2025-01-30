@@ -1,9 +1,10 @@
 import numpy as np
 import scipy.stats
 
-def RANGE(start, stop, step, exclude=None, repeat=True, shape=None, 
+def RANGE(start, stop, step, exclude=None, repeat=True, shape=None, len=None,
           length=None, min_diff=None, max_attempts=1000):
     
+    if len is not None: length = len
     if length is not None:
         n = length
     elif shape is not None:
