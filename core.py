@@ -363,7 +363,6 @@ class Question:
         
         # This is a hack used to fix display in Colab
         if COLAB:
-            print('colab!')
             display(Latex(""))
         
         if len(self.versions) == 0:
