@@ -387,15 +387,21 @@ class Question:
                 text = text.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
                 text = text.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
             
-            answer_options = self.versions[i]['answer_options']
+            #-----------------------------------------------
+            # Display Answers
+            #-----------------------------------------------
+            answer_options = self.versions[i]['answer_options'].copy()
+            for ao, i in enumerate(answer_options):
+                ao = ao.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
+                ao = ao.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
+                ao = ao.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
+                ao = ao.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
+                answer_options[i] = ao
+            
             
             display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b><br/><br/></p>'))
             display(HTML(f'<font size="{size}">{text}</font><br/>'))
             display(HTML('<b><font size=4>Answer Options</font></b>'))
-            
-            #-----------------------------------------------
-            # Display Answers
-            #-----------------------------------------------
             
             # Multiple Choice
             if self.type == 'MC':
