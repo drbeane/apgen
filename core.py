@@ -590,7 +590,7 @@ def process_template(qt, num_versions, num_to_display, compact_answers, generate
     
     q = Question(qt=qt)
     q.generate(n=num_versions, attempts=attempts, seed=seed)
-    q.display_versions(limit=num_to_display, compact_answers=True)
+    q.display_versions(limit=num_to_display, compact_answers=compact_answers)
     
     
 
