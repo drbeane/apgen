@@ -391,14 +391,15 @@ class Question:
             # Display Answers
             #-----------------------------------------------
             answer_options = self.versions[i]['answer_options'].copy()
-            for i, ao in enumerate(answer_options):
-                ao = str(ao)
-                ao = ao.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
-                ao = ao.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
-                ao = ao.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
-                ao = ao.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
-                answer_options[i] = ao
-            
+            if COLAB:
+                for i, ao in enumerate(answer_options):
+                    ao = str(ao)
+                    ao = ao.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
+                    ao = ao.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
+                    ao = ao.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
+                    ao = ao.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
+                    answer_options[i] = ao
+                
             
             display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b><br/><br/></p>'))
             display(HTML(f'<font size="{size}">{text}</font><br/>'))
@@ -411,26 +412,26 @@ class Question:
                 out = ''
                 for i, ao in enumerate(answer_options):
                     x = letters[i]
-                    #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
-                    out += f'[{x}] {ao}' if i==0 else f'({x}) {ao}'
-                    out += '     ' if compact_answers else '\n'
+                    out += f'<tt>[{x}]</tt> {ao}' if i==0 else f'<tt>({x})</tt> {ao}'
+                    out += '&nbsp'*12 if compact_answers else '<br/>\n'
                 out = out.strip('\n')
-                print(out)
+                #print(out)
+                display(HTML(out))
                         
             # Multiple Answer
             elif self.type == 'MA':
-                
                 out = ''
                 for i, ao in enumerate(answer_options):
                     #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
                     ao_mod = ao
-                    if ao_mod[:3] == '[ ]': ao_mod = '[ ]' + ao_mod[3:]
-                    elif ao_mod[:3] == '[X]': ao_mod = '[X]' + ao_mod[3:]
+                    if ao_mod[:3] == '[ ]': ao_mod = '<tt>[ ]</tt>' + ao_mod[3:]
+                    elif ao_mod[:3] == '[X]': ao_mod = '<tt>[X]</tt>' + ao_mod[3:]
                     
                     out += f'{ao_mod}'
-                    out += '     ' if compact_answers else '\n'
+                    out += '&nbsp'*12 if compact_answers else '<br/>\n'
                 out = out.strip('\n')
-                print(out)
+                #print(out)
+                display(HTML(out))
                 
             # Numerical
             elif self.type == 'NUM':
@@ -439,7 +440,7 @@ class Question:
             # Matching
             elif self.type == 'MT':
                 for ao in answer_options:
-                    display(Markdown(f'{ao}'))
+                    display(HTML(f'{ao}'))
                     
                 
             print()    
