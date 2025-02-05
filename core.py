@@ -5,25 +5,30 @@ class Question:
 
     def __init__(self, qt=None, file=None, id=None):
         '''
-        Parameters 
-            file - path for file containing problem template
-            qt - question template (string)
-            id - identifier for problem
+        Class representing a single question. 
+        
+        PARAMETERS
+        file : path for file containing question template
+        qt   : string containing question template
+        id   : identifier for problem (deprecated. id should be contained in template)
         '''
         
-        self.file = file
+        # Create some basic attributes
+        self.file = file             
         self.qt = qt
         self.id = id
-        
         self.type = 'MC'
         self.margin = '0'
         
-        # Create items to store information from template
-        self.var_script = ''
-        self.conditions = []
+        # Set default delimiters. This can be changed in the CONFIG section of the template.
+        self.var_delim = '[[ ]]'     
+        self.eqn_delim = '$ $'
         
-        self.text_raw = ''
-        self.text = ''
+        # Create items to store information from template
+        self.var_script = ''         # Stores script for variable creation. 
+        self.conditions = []         # List of conditions
+        self.text_raw = ''           # Stores the raw text from the template. 
+        self.text = ''               # Store the processed text (w/o var eval). 
         self.answer_options = []
         self.versions = []
         
@@ -46,7 +51,6 @@ class Question:
         self.parse_template()
         self.parse_text()
         
-
 
     def parse_template(self):
         
@@ -376,6 +380,13 @@ class Question:
         
         for i in range(limit):
             text = self.versions[i]['text']
+            
+            if COLAB: 
+                text = text.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
+                text = text.replace(r'$$', '__$$__')             # Replace $$ with __$$__ to be used with Katex
+                text = text.replace(r'$', '__$__')               # Replace $ with __$__ to be used with Katex
+                text = text.replace('__DOLLAR__SIGN__', r'\$')   # Put escaped dollar signs back in. 
+            
             answer_options = self.versions[i]['answer_options']
             
             display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b><br/><br/></p>'))
@@ -454,7 +465,7 @@ class Question:
         convertor.run(display_versions=display_versions)
         
         if save_template:
-            with open(f'{path}/{self.id}.txt', 'w') as f:
+            with open(f'{path}/{self.id}.txt', 'w', encoding="utf-8") as f:
                 f.write(self.qt)
         
         print('QTI file created successfully')
