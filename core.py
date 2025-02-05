@@ -383,9 +383,9 @@ class Question:
             
             if COLAB: 
                 text = text.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
-                text = text.replace(r'$$', '__$$__')             # Replace $$ with __$$__ to be used with Katex
-                text = text.replace(r'$', '__$__')               # Replace $ with __$__ to be used with Katex
-                text = text.replace('__DOLLAR__SIGN__', r'\$')   # Put escaped dollar signs back in. 
+                text = text.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
+                text = text.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
+                text = text.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
             
             answer_options = self.versions[i]['answer_options']
             
