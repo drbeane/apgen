@@ -391,7 +391,7 @@ class Question:
             # Display Answers
             #-----------------------------------------------
             answer_options = self.versions[i]['answer_options'].copy()
-            for ao, i in enumerate(answer_options):
+            for i, ao in enumerate(answer_options):
                 ao = str(ao)
                 ao = ao.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
                 ao = ao.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
