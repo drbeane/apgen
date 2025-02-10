@@ -135,74 +135,142 @@ class makeQTI():
             self.imNum = 0
             
                    
-        def run(self, display_versions=None):
+        def run(self, create_files=True, seeds='hide'):
             from IPython.core.display import HTML, display
             
-            #make the header
+            #-----------------------------------------------
+            #  1.  Create Header and Footer.
+            #-----------------------------------------------
             self.makeHeader()
-            #make the footer
             self.makeFooter()
     
-            # open the output files and write the headers
-            with self.outFile.open('w') as f:
-                f.write(self.header + '\n')
-            with self.manFile.open('w') as f:
-                f.write(self.manHeader + '\n')
-
+            #-----------------------------------------------
+            #  2.  Write header to files (move to the end)
+            #-----------------------------------------------
+            out_file_contents = self.header + '\n'
+            man_file_contents = self.manHeader + '\n'
+    
+            #-----------------------------------------------
+            #  3.  Loop over the versions
+            #-----------------------------------------------
             for n, version in enumerate(self.q.versions):
                 
-                version['text'] = self.process_equations(version['text'])
-                for i,ao in enumerate(version['answer_options']):
-                    version['answer_options'][i] = self.processEquations(ao)
+                #-----------------------------------------------
+                #  3.a.  Process eqns in text. Add seed text.
+                #-----------------------------------------------
+                temp = self.process_equations(version['text'])
                 
-                if display_versions is not None and n < display_versions:
-                    display(HTML(f'<b>Version {n+1}'))
-                    print(version)
+                if seeds in ['hide', 'show']:
+                    temp = temp.strip()
+                    #print(f'--{temp}--')
                     
+                    # Remove closing paragraph tag, if present. 
+                    close_par = False
+                    if temp[-4:] == '</p>':   
+                        close_par = True
+                        temp = temp[:-4] + '\n<br/>'
+                                    
+                    if seeds == 'hide':
+                        temp += f'<span style="color:white; font-size:10px">[Version {version["version_seed"]}]</span>'
+                    if seeds == 'show':
+                        temp += f'<span style="font-size:10px">[Version {version["version_seed"]}]</span>'
+                    
+                    if close_par: temp += '\n</p>'
+                    
+                    
+                    #print(temp)                        
+                    
+                version['text_eqn_proc'] = temp
+                
+                #-----------------------------------------------
+                #  3.b.  Process equations for answers
+                #-----------------------------------------------
+                version['ans_eqn_proc'] = []
+                for i,ao in enumerate(version['answer_options']):
+                    #temp = self.processEquations(ao)
+                    temp = self.process_equations(ao)
+                    version['ans_eqn_proc'].append(temp)
+                                
+                #-----------------------------------------------
+                #  Misc Bullshit
+                #-----------------------------------------------    
                 self.qPts = '1'
-                # advance the count and initialize things
                 self.qNumber= n+1
                 self.htmlText=''
                 
+                                
+                #-----------------------------------------------
+                #  3.c.  Call parse_type to create v['qti_text']
+                #-----------------------------------------------
+                # The function below formats text_eqn_proc and ans_eqn_proc
+                # based on question type and then creates v['qti_text]. 
+                #
+                # cur_version below is used instead of just passing version as an argument. 
+                # I should change that. This obscures the flow of the program. 
                 self.cur_version = version
+                self.parse_type()
                 
-                self.typeChooser()
+                #-----------------------------------------------
+                #  3.d.  Add the question to out_file_contents
+                #-----------------------------------------------
+                out_file_contents += self.cur_version['qti_text'] + '\n'
+
+            #-----------------------------------------------
+            #  4.  Write the footer to file
+            #-----------------------------------------------                    
+            out_file_contents += self.footer
+            man_file_contents += self.manFooter
+            
+            #with self.outFile.open('a') as f:
+            #    f.write(self.footer)
+            #with self.manFile.open('a') as f:
+            #    f.write(self.manFooter)
+            
+            
+            #-----------------------------------------------
+            #  5.  Write the contents to the files
+            #-----------------------------------------------
+            # Write the files
+            if create_files:
+                with self.outFile.open(mode='w', encoding="utf-8") as f:
+                    f.write(out_file_contents)
+                with self.manFile.open(mode='w', encoding="utf-8") as f:
+                    f.write(man_file_contents)
                 
-                with self.outFile.open(mode = 'a', encoding = "utf-8") as f:
-                    f.write(self.writeText + '\n')
-                    
-            with self.outFile.open('a') as f:
-                f.write(self.footer)
-            with self.manFile.open('a') as f:
-                f.write(self.manFooter)
+                #---------------------------------------------------------------
+                #  6.  Not sure. Register names spaces? Write stuff to file?
+                #---------------------------------------------------------------
+                ET.register_namespace("", "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1")
+                tree = ET.parse(str(self.manFile))
+                root = tree.getroot()
+                indent(root)
+                #mydata = ET.tostring(root, encoding='utf8').decode('utf8')
+                mydata = ET.tostring(root).decode()
+
+                myfile = open(str(self.manFile), 'w')
+                myfile.write(mydata)
+                myfile.close()
+                
+                ET.register_namespace("", "http://www.imsglobal.org/xsd/ims_qtiasiv1p2")
+                tree = ET.parse(str(self.outFile))
+                root = tree.getroot()
+                #mydata = ET.tostring(root, encoding='utf8').decode('utf8')
+                mydata = ET.tostring(root).decode()
+                
+                myfile = open(str(self.outFile), 'w')
+                myfile.write(mydata)
+                myfile.close()
             
-            #import with xml parser, clean up, export
             
-            ET.register_namespace("", "http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1")
-            tree = ET.parse(str(self.manFile))
-            root = tree.getroot()
-            indent(root)
-            #mydata = ET.tostring(root, encoding='utf8').decode('utf8')
-            mydata = ET.tostring(root).decode()
-            myfile = open(str(self.manFile), 'w')
-            myfile.write(mydata)
-            myfile.close()
-            
-            ET.register_namespace("", "http://www.imsglobal.org/xsd/ims_qtiasiv1p2")
-            tree = ET.parse(str(self.outFile))
-            root = tree.getroot()
-            #mydata = ET.tostring(root, encoding='utf8').decode('utf8')
-            mydata = ET.tostring(root).decode()
-            myfile = open(str(self.outFile), 'w')
-            myfile.write(mydata)
-            myfile.close()
-            
-            # compress the folder    
-            shutil.make_archive(str(self.newDirPath), 'zip', str(self.newDirPath))
-            #remove the now compressed folder
-            import time
-            time.sleep(3)
-            shutil.rmtree(str(self.newDirPath), ignore_errors=False)
+                #---------------------------------------------------------
+                #  7.  Create zip file and delete folder w/ temp files. 
+                #---------------------------------------------------------
+                # compress the folder
+                shutil.make_archive(str(self.newDirPath), 'zip', str(self.newDirPath))
+                #remove the now compressed folder
+                import time
+                time.sleep(3)
+                shutil.rmtree(str(self.newDirPath), ignore_errors=False)
             
 
         
@@ -260,7 +328,7 @@ class makeQTI():
             # add the info to the manifest file
             self.addResMan(imgpath)
 
-        def typeChooser(self):
+        def parse_type(self):
             '''
             Choose the question parser based on the question type
             '''
@@ -310,8 +378,8 @@ class makeQTI():
         def parseMC(self):
             import numpy as np
 
-            quest = self.cur_version['text']
-            answers = self.cur_version['answer_options']
+            quest = self.cur_version['text_eqn_proc']
+            answers = self.cur_version['ans_eqn_proc']
             correct = [1]
 
             if self.shuffle:
@@ -326,7 +394,7 @@ class makeQTI():
             # build the question text
             questionTextStart = self.questionText(quest, itid)
             questionTextResponse = self.questionTextResponses(answers, correct)
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             
             return
 
@@ -334,8 +402,8 @@ class makeQTI():
         def parseMA(self):
             import numpy as np
 
-            quest = self.cur_version['text']
-            raw_answers = self.cur_version['answer_options']
+            quest = self.cur_version['text_eqn_proc']
+            raw_answers = self.cur_version['ans_eqn_proc']
             answers = []
             correct = []
             for n, a in enumerate(raw_answers):
@@ -363,15 +431,15 @@ class makeQTI():
             # build the question text
             questionTextStart = self.questionText(quest, itid)
             questionTextResponse = self.questionTextResponses(answers, correct)
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             
             return
   
 
             
         def parseMT(self):
-            question = self.cur_version['text']
-            raw_answers = self.cur_version['answer_options']
+            question = self.cur_version['text_eqn_proc']
+            raw_answers = self.cur_version['ans_eqn_proc']
             
             #print(raw_answers)
             #print()
@@ -418,13 +486,13 @@ class makeQTI():
             # build the question text
             questionTextStart = self.questionText(question, itid)
             questionTextResponse = self.questionTextResponses_MT(left_prompts, right_answers)
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             
                       
         def parseNUM(self):
             
-            question = self.cur_version['text']
-            raw_answer = self.cur_version['answer_options'][0]
+            question = self.cur_version['text_eqn_proc']
+            raw_answer = self.cur_version['ans_eqn_proc'][0]
             
             answer = raw_answer
             margin = '0'
@@ -443,7 +511,7 @@ class makeQTI():
             
             questionTextStart = self.questionText(question, itid)
             questionTextResponse = self.questionTextResponses_NUM(answer, margin)
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
 
      
             
@@ -532,7 +600,7 @@ class makeQTI():
             questionTextResponse += '''</resprocessing>
                                       </item>'''
             # write it
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             #reformat answers to make html preview
             answers = []
             for dropName, resp in dropAns.items():
@@ -613,7 +681,7 @@ class makeQTI():
                 answers.append('{}: {}'.format(blank, ans))
             corr = []
             self.htmlText = self.questionTextHtml(itid, quest, answers, corr)
-            self.writeText = questionTextStart + questionTextResponse 
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse 
             
         def parseES(self):
             quest = self.fullText[0].split(self.sep, 1) [1].strip()
@@ -640,7 +708,7 @@ class makeQTI():
                             </resprocessing>
                         </item>
                         '''
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             #format for html preview
             corr = []
             answers = []
@@ -684,7 +752,7 @@ class makeQTI():
             </resprocessing>
         </item>
             '''
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             #reformat answers to make html preview
             corr = []
             self.htmlText = self.questionTextHtml(itid, quest, [answer], corr)
@@ -731,7 +799,7 @@ class makeQTI():
       </item>
             '''
             
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             #reformat answers to make html preview
             corr = []
             answer=''
@@ -834,7 +902,7 @@ class makeQTI():
             </resprocessing>
             </item>
             '''
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             #reformat answers to make html preview
             answers = []
             for catName, resp in catAns.items():
@@ -920,7 +988,7 @@ class makeQTI():
                 </item>
             '''
             
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             #reformat answers to make html preview
             answers = [toplabel]
             for i, id in enumerate(idslist):
@@ -967,7 +1035,7 @@ class makeQTI():
             answers = corr
             corr = []
             self.htmlText = self.questionTextHtml(itid, quest, answers, corr)
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
 
 
         def parseMC_OLD(self):
@@ -1008,7 +1076,7 @@ class makeQTI():
             # build the question text
             questionTextStart = self.questionText(quest, itid)
             questionTextResponse = self.questionTextResponses(answers, corr)
-            self.writeText = questionTextStart + questionTextResponse
+            self.cur_version['qti_text'] = questionTextStart + questionTextResponse
             self.htmlText = self.questionTextHtml(itid, quest, answers, corr)
                
             
@@ -1044,7 +1112,7 @@ class makeQTI():
                 '''
             
             out1 = f'''
-            <item ident="{itid}" title="Question">
+            <item ident="{itid}" title="Version {self.cur_version['version_seed']}">
                 <itemmetadata>
                   <qtimetadata>
                     <qtimetadatafield>
@@ -1264,6 +1332,8 @@ class makeQTI():
         
         def process_equations(self, text):
             
+            text = text.replace(r'\$','__DS__')
+            
             # Replace $$...$$
             while True:
                 if text.count('$$') < 2:
@@ -1292,20 +1362,22 @@ class makeQTI():
                 
                 eqn_text = text[i+1:j]
                 
-                # Not sure what this stuff is for, reall. 
+                # Not sure what this stuff is for, really. 
                 neweq = urllib.parse.quote(eqn_text)
                 neweq = neweq.replace('%', '%25')
                 
                 new_text =  f'<img class="equation_image" title="{eqn_text}" '
                 new_text += f'src="/equation_images/{neweq}?scale=1" alt="LaTeX: {eqn_text}" '
-                new_text += f'data-equation-content="{eqn_text}" data-ignore-a11y-check="">'
+                new_text += f'data-equation-content="{eqn_text}" data-ignore-a11y-check="" />'
 
                 text = text[:i] + new_text + text[j+1:]
+            
+            text = text.replace('__DS__', '$')
             
             return text
             
         
-        def processEquations_NEW(self, text):
+        def DELETE_processEquations_NEW(self, text):
             
             temp = text.split('</p>')[0]    # 🟡🟡🟡🟡
             print('BEFORE')
@@ -1329,7 +1401,7 @@ class makeQTI():
             
             return text
             
-        def processEquations(self, fullData):
+        def DELETE_processEquations(self, fullData):
             # recieves a question block (a list of lines)
             # go through each line looking for $$...$$
             for i in range(len(fullData)):
@@ -1342,7 +1414,7 @@ class makeQTI():
                     fullData[i] = re.sub(r'\$(.*)\$', self.processEquation, fullData[i], re.M)
             return fullData
         
-        def processEquation(self, eq):
+        def DELETE_processEquation(self, eq):
             # receives mathjax/Latex style formula text with surrounding $$
             # returns only the html conversion of the equation
             # converts the equation into a <p><img... of the following format

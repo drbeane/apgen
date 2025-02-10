@@ -251,20 +251,19 @@ class Question:
     #------------------------------------------------------------
     # generate function creates versions from template
     #------------------------------------------------------------
-    def generate(self, n=1, seed=None, max_attempts=100_000, prevent_duplicates=True, 
-                 progress_bar=False, updates=None, report_errors=True):
+    def generate(self, n=1, seed=None, attempts=1000, prevent_duplicates=True, progress_bar=False):
         '''
         Description: Creates versions from template
         
         Paramters:
         n                  : Number of versions to generate.
-        attempts           : Total number of attempts allowed to generate n questions
+        attempts           : Total number of attempts allowed to generate EACH question
         prevent_duplicates : If true, question texts are compared and repeats are discarded. 
         seed               : Seed for RNG
         '''
         
         from IPython.core.display import HTML, display
-        from tqdm.notebook import tqdm
+        from tqdm import tqdm
         
         self.versions = []
         
@@ -272,8 +271,6 @@ class Question:
         duplicates_encountered = 0
         
         if seed is not None:
-            # This sets the "global" seed for the generation process.
-            # Each version will also have its own seed. 
             np.random.seed(seed)
         
         
@@ -286,55 +283,20 @@ class Question:
         
         # Loop for the desired number of questions
         for i in my_range:
-            #from IPython.display import clear_output
-            #clear_output(wait=True)
             
-            # Attempt to generate a problem
-            while True:
-                # Increment counter and check to see if limit has been reached
+            # Attempt to generated a problem
+            for k in range(attempts):
+                
                 generation_attempts += 1
-                if generation_attempts > max_attempts:
-                    print()
-                    #clear_output(wait=True)
-                    display(HTML('<b><font color="DC143C" size=5>--VERSION GENERATION FAILED--</font></b>'))
-                    print(f'Failed to generate {n} versions in {max_attempts} attempts.')
-                    #print(f'Failed to generated version number {len(self.versions) +1}.')
-                    print(f'{len(self.versions)} versions successfully generated.')
-                    print('Consider increasing the max_attempts parameter or adjusting problem template.')
-                    print()
-                    return  
-                    
+                version = self.generate_one()
                 
-                #-------------------------------------------------------------
-                # Store state so that "global" seed can be reinstated later. 
-                #-------------------------------------------------------------
-                np_state = np.random.get_state()
-                
-                #------------------------------------
-                # Generate Seed and Attempt Generation                
-                #------------------------------------
-                temp = np.random.uniform(1,10)
-                version_seed = int(100000*temp)
-                version = self.generate_one(version_seed, report_errors)
-                
-                #-------------------------------------------------------------
-                # Restore the global random state
-                #-------------------------------------------------------------
-                np.random.set_state(np_state)
-                
-                 
-                #-------------------------------------------------------------
-                #  Check if version was generated sucessfully. 
-                #  (no errors + conditions met)
-                #  If not, restart loop and try again
-                #-------------------------------------------------------------
-                if version['status'] != 'Success':
+                # Check to see if conditions were met.
+                # If not, restart loop and try again. 
+                if version is None:
                     continue
                 
-                #-------------------------------------------------------------
-                #  Check if version is a duplicate.
-                #  If so, restart loop and try again
-                #-------------------------------------------------------------
+                # Check to see if the question is a duplicate
+                # If so, restart loop and try again. 
                 if prevent_duplicates:
                     dup = False
                     for v in self.versions:
@@ -348,66 +310,34 @@ class Question:
                 
                 break  # if here, a version was found
             
-            #-------------------------------------------------------------
-            # If here, a version was found. Add it to list
-            #-------------------------------------------------------------
-            self.versions.append(version)
+            if version is None:
+                print()
+                display(HTML('<b><font color="DC143C" size=5>--VERSION GENERATION FAILED--</font></b>'))
+                #print(f'Failed to generate a satisfactory version in {attempts} attempts.')
+                print(f'Failed to generated version number {len(self.versions) +1}.')
+                print(f'{len(self.versions)} versions successfully generated.')
+                print('Consider increasing the maximum number of attempts or adjusting problem parameters.')
+                print()
+                return 
             
-            # Print update
-            if updates is not None and i % updates == 0:
-                print(f'{i+1} versions generated.')
+            # Add version to list
+            self.versions.append(version)
                 
         print()
         display(HTML('<b><font size=5>Versions Generated</font></b>'))
         print(f'{generation_attempts} attempts were required to generate {n} versions. {duplicates_encountered} duplicate versions were generated and discarded.\n\n')
         
 
-    def generate_one(self, seed, report_errors=True):
+    def generate_one(self, verbose=False):
         from IPython.core.display import HTML, display
-        import warnings
-        warnings.filterwarnings('error', category=RuntimeWarning)
-        
-        np.random.seed(seed)
         
         # Prepare Scope
         scope = {}
         exec('from apgen.functions import *', scope)
-        pre_scope = scope.copy()
-        
-        # Create Version Dictionary
-        # Replace with Class later
-        version_dict = {
-            'status': 'Success',
-            'version_seed': seed,
-            'text' : None,
-            'colab_text': None,
-            'jupyter_text': None,
-            'qti_text': None,
-            'answer_options' : None,
-            'var_defns' : scope
-        }
-        
-        
-        #-------------------------------------------------------------
-        # Seed stuff. 
-        # Generate a version seed. 
-        # Store state so that "global" seed can be reinstated later. 
-        # Set version seed. 
-        #-------------------------------------------------------------
-        #version_seed = int(''.join(np.random.choice(list('123456789'), size=6)))
-        #np_state = np.random.get_state()
-        #np.random.seed(version_seed)
         
         # Execute Variables
-        try:
-            exec(self.var_script, scope)
-        except Exception as e:
-            if report_errors:
-                print(f'ERROR: {e} (seed={seed})')
-            version_dict['status'] = 'Error'
-            for k in pre_scope.keys(): del scope[k]
-            return version_dict
-        
+        exec(self.var_script, scope)
+        del scope['__builtins__']       # Just for tidiness
         
         # Get rid of precision/rounding issues.
         for k, v in scope.items():
@@ -418,43 +348,19 @@ class Question:
         for cond in self.conditions:
             valid = eval(cond, scope)
             if not valid:
-                version_dict['status'] = 'Conditions Failed'
-                for k in pre_scope.keys(): del scope[k]
-                return version_dict
+                if verbose: print(f'  Unsatisfied Condition: "{cond}"')
+                return None
         
-        
-        # Answer Variable Values
-        try:
-            text_w_vars = insert_vars(self.text, scope)
-            ans_w_vars = [insert_vars(ao, scope) for ao in self.answer_options]
-        except Exception as e:
-            if report_errors:
-                print(f'ERROR: {e} (seed={seed})')
-            version_dict['status'] = 'Error'
-            for k in pre_scope.keys(): del scope[k]
-            return version_dict
-            
-        
-        #del scope['__builtins__']       # Just for tidiness
-        
-        # Clean up the scope. Remove anything not created by var_script
-        
-        for k in pre_scope.keys():
-            del scope[k]
-        
-        version_dict['text'] = text_w_vars
-        version_dict['answer_options'] = ans_w_vars
-        #version_dict = {
-        #    'version_seed': seed,
-        #    'text' : text_w_vars,
-        #    'answer_options' : ans_w_vars,
-        #    'var_defns' : scope.copy()
-        #}
+        # Insert variables into text and answer options. 
+        version_dict = {
+            'text' : insert_vars(self.text, scope),
+            'answer_options' : [insert_vars(ao, scope) for ao in self.answer_options]
+        }
         
         return version_dict
 
 
-    def display_versions(self, size=3, limit=None, compact_answers=False, show_seeds=False):
+    def display_versions(self, size=3, limit=None, compact_answers=False):
         from IPython.display import HTML, display, Markdown, Latex, Javascript
         import sys
         COLAB = 'google.colab' in sys.modules
@@ -490,10 +396,7 @@ class Question:
             #-------------------------------------------------
             # Display the actual version (without answers)
             #-------------------------------------------------
-            seed_text = f'  <font size=2>({self.versions[i]['version_seed']})</font>' if show_seeds else ''
-            display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b>{seed_text}<br/><br/></p>'))
-            
-            
+            display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b><br/><br/></p>'))
             if COLAB:   # Display colab_text
                 display(HTML(f'<font size="{size}">{colab_text}</font><br/>'))
             else:
@@ -564,12 +467,8 @@ class Question:
         if COLAB: 
             from apgen.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
-    
-    def version_details(self, i, flags=''):
-        v = self.versions[i]
-        version_details(v, flags=flags)
            
-    def generate_qti(self, path='', overwrite=True, shuffle=True, save_template=False, seeds='hide', create_files=True):
+    def generate_qti(self, path='', overwrite=True, shuffle=True, save_template=False):
         from apgen.qti_convert import makeQTI
         import os
         
@@ -587,14 +486,13 @@ class Question:
             self.id = self.id + f'_v{max(nums)+1:02}'
         
         convertor = makeQTI(self, path=path, shuffle=shuffle)
-        convertor.run(create_files=create_files, seeds=seeds)
+        convertor.run()
         
-        if save_template and create_files:
+        if save_template:
             with open(f'{path}/{self.id}.txt', 'w', encoding="utf-8") as f:
                 f.write(self.qt)
         
-        if create_files:
-            print('QTI file created successfully')
+        print('QTI file created successfully')
         
       
 def insert_vars(text, scope):
@@ -697,9 +595,6 @@ def evaluate_and_format_var(x, scope):
     return formatted_value
 
 
-#-----------------------------------------
-# This REALLY needs a new name
-#-----------------------------------------
 def process_template(qt, num_versions, num_to_display, compact_answers, generate_qti, 
                      save_template, shuffle_answers, attempts=1000, seed=None):
     from google.colab import files # type: ignore
@@ -730,35 +625,6 @@ def process_template(qt, num_versions, num_to_display, compact_answers, generate
         files.download(fname)
 
     return q
-
-def version_details(v, flags=''):
-        from IPython.display import display, HTML
-        
-        display(HTML(f'<text size=5><b>Seed</b></text>'))
-        print(v["version_seed"])
-        display(HTML(f'<text size=5><b>Status</b></text>'))
-        print(v["status"])
-        
-        display(HTML('<text size=5><b>Text Objects</b></text>'))
-        if 'text' in v: 
-            display(HTML('<text size=4><code>text</code></text>'))
-            print(v['text'])
-        if 'colab_text' in v and 'c' in flags:
-            display(HTML('<text size=5><code>colab_text</code></text>'))
-            print(v['colab_text'])
-        if 'jupyter_text' in v and 'c' in flags:
-            display(HTML('<text size=5><code>jupyter_text</code></text>'))
-            print(v['jupyter_text'])    
-        if 'qti_text' in v and 'q' in flags:
-            display(HTML('<text size=5><code>qti_text</code></text>'))
-            print(v['qti_text'])
-        
-        display(HTML('<text size=5><b>Variables</b></text>'))
-        for k,val in v['var_defns'].items():
-            display(HTML(f'<code>{k} - {val}</code>'))
-            
-        display(HTML('<text size=5><b>Need to add answer options.</b></text>'))
-        
 
 def DISPLAY_DELETE(x, scope):
     print(x)
