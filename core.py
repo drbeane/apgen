@@ -303,18 +303,21 @@ class Question:
                     print('Consider increasing the max_attempts parameter or adjusting problem template.')
                     print()
                     return  
-                    
+
+                #------------------------------------
+                # Generate Seed                 
+                #------------------------------------
+                temp = np.random.uniform(1,10)
+                version_seed = int(100000*temp)
                 
                 #-------------------------------------------------------------
                 # Store state so that "global" seed can be reinstated later. 
                 #-------------------------------------------------------------
                 np_state = np.random.get_state()
-                
+                                
                 #------------------------------------
-                # Generate Seed and Attempt Generation                
+                # Attempt to Generate a Version
                 #------------------------------------
-                temp = np.random.uniform(1,10)
-                version_seed = int(100000*temp)
                 version = self.generate_one(version_seed, report_errors)
                 
                 #-------------------------------------------------------------
