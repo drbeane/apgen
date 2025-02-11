@@ -700,8 +700,8 @@ def evaluate_and_format_var(x, scope):
 #-----------------------------------------
 # This REALLY needs a new name
 #-----------------------------------------
-def process_template(qt, num_versions, num_to_display, compact_answers, generate_qti, 
-                     save_template, shuffle_answers, attempts=1000, seed=None):
+def colab_process_template(qt, num_versions, num_to_display, compact_answers, generate_qti, 
+                     save_template, shuffle_answers, max_attempts=1000, seed=None):
     from google.colab import files # type: ignore
     import os, sys
     from IPython.display import display, Javascript
@@ -710,7 +710,7 @@ def process_template(qt, num_versions, num_to_display, compact_answers, generate
         display(Javascript('''google.colab.output.setIframeHeight(0, true, {maxHeight: 10000})'''))
     
     q = Question(qt=qt)
-    q.generate(n=num_versions, attempts=attempts, seed=seed)
+    q.generate(n=num_versions, max_attempts=max_attempts, seed=seed)
     q.display_versions(limit=num_to_display, compact_answers=compact_answers)
     
     
