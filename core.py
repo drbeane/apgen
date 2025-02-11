@@ -490,7 +490,7 @@ class Question:
             #-------------------------------------------------
             # Display the actual version (without answers)
             #-------------------------------------------------
-            seed_text = f'  <font size=2>({self.versions[i]['version_seed']})</font>' if show_seeds else ''
+            seed_text = f'  <font size=2>({self.versions[i]["version_seed"]})</font>' if show_seeds else ''
             display(HTML(f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>Version {i+1}</font></b>{seed_text}<br/><br/></p>'))
             
             
