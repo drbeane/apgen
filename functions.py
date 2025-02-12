@@ -357,7 +357,7 @@ def TABLE(contents, config=None, rlab=None, clab=None, inc_margin=True):
         
     tm = 20 if inc_margin else 0
     t = '<table style="border:1px solid black;  border-spacing:0px; border-collapse: collapse; '
-    t += f'background-color:#FFFFFF; ; margin: {tm}px 0px 20px 0px;"">\n'
+    t += f'background-color:#FFFFFF; ; margin: 20px 0px 20px 0px;"">\n'
     t += '<tbody>\n'
     
     
