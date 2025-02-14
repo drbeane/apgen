@@ -1,4 +1,3 @@
-
 import numpy as np
 from apgen.functions import *
 
@@ -564,7 +563,7 @@ class Question:
         
         COLAB = 'google.colab' in sys.modules
         if COLAB: # Part of hack to make Colab render LaTex
-            out += display(Latex(""))
+            display(Latex(""))
         
         out = self.create_display_html(
             size=size, limit=limit, compact_answers=compact_answers, show_seeds=show_seeds
