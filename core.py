@@ -457,7 +457,125 @@ class Question:
         return version_dict
 
 
-    def display_versions(self, size=3, limit=None, compact_answers=False, show_seeds=False):
+    def create_display_html(self, size=3, limit=None, compact_answers=False, show_seeds=False):
+        from IPython.display import HTML, display, Markdown, Latex, Javascript
+        import sys
+        
+        COLAB = 'google.colab' in sys.modules
+        
+        # Check to see if versions have been created. 
+        if len(self.versions) == 0:
+            out = 'No versions have been generated. Please call the <code>generate()</code> method.'
+            #print('No versions have been generated. Please call the generate() method.')
+            return out
+        
+        # Determine number to display 
+        if limit is None: limit = len(self.versions) 
+        limit = min(limit, len(self.versions))
+        
+        # Add "Displaying Versions" Header
+        out = '<b><font size=5>Displaying Versions</font></b>'
+    
+        # Add Versions
+        for i in range(limit):
+            # Just add the version text with no processing if in Jupyter
+            jupyter_text = self.versions[i]['text']
+                        
+            # Mess around with Dollar Signs to be able to use Katex in Colab. 
+            colab_text = jupyter_text.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
+            colab_text = colab_text.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
+            colab_text = colab_text.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
+            colab_text = colab_text.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
+            
+            #-------------------------------------------------
+            # Display the actual version (without answers)
+            #-------------------------------------------------
+            seed_text = f'  <font size=2>({self.versions[i]["version_seed"]})</font>' if show_seeds else ''
+            
+            # Add Version Number and Seed
+            out += f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>'
+            out += f'Version {i+1}</font></b>{seed_text}<br/><br/></p>'
+            
+            # Add Either Colab or Jupyter text, as needed
+            if COLAB:   
+                out += f'<font size="{size}">{colab_text}</font><br/>'
+            else:
+                out += f'<font size="{size}">{jupyter_text}</font><br/>'
+            
+            self.versions[i]['colab_text'] = colab_text
+            self.versions[i]['jupyter_text'] = jupyter_text
+            
+            #-----------------------------------------------
+            # Add the Answers
+            #-----------------------------------------------
+            out += '<p><b><font size=4>Answer Options</font></b></p>'
+            
+            answer_options = self.versions[i]['answer_options'].copy()
+            if COLAB:
+                for i, ao in enumerate(answer_options):
+                    ao = str(ao)
+                    ao = ao.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
+                    ao = ao.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
+                    ao = ao.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
+                    ao = ao.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
+                    answer_options[i] = ao
+            
+            # Multiple Choice
+            if self.type == 'MC':
+                
+                letters = list('abcdefghijklmnopqrstuvwzyz')
+                ans_str = ''
+                for i, ao in enumerate(answer_options):
+                    x = letters[i]
+                    ans_str += f'<tt>[{x}]</tt> {ao}' if i==0 else f'<tt>({x})</tt> {ao}'
+                    ans_str += '&nbsp'*12 if compact_answers else '<br/>\n'
+                ans_str = ans_str.strip('\n')
+                out += ans_str
+                        
+            # Multiple Answer
+            elif self.type == 'MA':
+                ans_str = ''
+                for i, ao in enumerate(answer_options):
+                    #print(f'[{x}] {ao}' if i==0 else f'({x}) {ao}')
+                    ao_mod = ao
+                    if ao_mod[:3] == '[ ]': ao_mod = '<tt>[ ]</tt>' + ao_mod[3:]
+                    elif ao_mod[:3] == '[X]': ao_mod = '<tt>[X]</tt>' + ao_mod[3:]
+                    
+                    ans_str += f'{ao_mod}'
+                    ans_str += '&nbsp'*12 if compact_answers else '<br/>\n'
+                ans_str = ans_str.strip('\n')
+                out += ans_str
+                
+            # Numerical
+            elif self.type == 'NUM':
+                out += f'ANSWER: {answer_options[0]}'
+            
+            # Matching
+            elif self.type == 'MT':
+                for ao in answer_options:
+                    out += f'{ao}'    
+        out += '<hr>'
+        return out
+    
+    def display_versions(self, size=3, limit=None, compact_answers=False, show_seeds=False):    
+        from IPython.display import HTML, display, Markdown, Latex, Javascript
+        import sys
+        
+        COLAB = 'google.colab' in sys.modules
+        if COLAB: # Part of hack to make Colab render LaTex
+            out += display(Latex(""))
+        
+        out = self.create_display_html(
+            size=size, limit=limit, compact_answers=compact_answers, show_seeds=show_seeds
+        )
+        display(HTML(out))
+        
+        # This is a hack used to fix display in Colab
+        if COLAB: 
+            from apgen.autorender import katex_autorender_min
+            display(Javascript(katex_autorender_min))
+
+    def display_versions_OLD(self, size=3, limit=None, compact_answers=False, show_seeds=False):
         from IPython.display import HTML, display, Markdown, Latex, Javascript
         import sys
         COLAB = 'google.colab' in sys.modules
@@ -472,7 +590,7 @@ class Question:
         limit = min(limit, len(self.versions))
         
         
-        # Implement hake to make Colab render LaTex
+        # Part of hack to make Colab render LaTex
         display(Latex(""))
         
         # Diplaying Versions Header
