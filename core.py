@@ -493,14 +493,14 @@ class Question:
             seed_text = f'  <font size=2>({self.versions[i]["version_seed"]})</font>' if show_seeds else ''
             
             # Add Version Number and Seed
-            out += f'<hr><p style="margin: 0px 6px 6px 0px;"><b><font size=4>'
-            out += f'Version {i+1}</font></b>{seed_text}<br/><br/></p>'
+            out += f'<br/><br/><hr><p>'
+            out += f'<b><font size=4>Version {i+1}</font></b>{seed_text}<br/>'
             
             # Add Either Colab or Jupyter text, as needed
             if COLAB:   
-                out += f'<font size="{size}">{colab_text}</font><br/>'
+                out += f'<font size="{size}">{colab_text}</font></p>'
             else:
-                out += f'<font size="{size}">{jupyter_text}</font><br/>'
+                out += f'<font size="{size}">{jupyter_text}</font></p>'
             
             self.versions[i]['colab_text'] = colab_text
             self.versions[i]['jupyter_text'] = jupyter_text
@@ -508,7 +508,7 @@ class Question:
             #-----------------------------------------------
             # Add the Answers
             #-----------------------------------------------
-            out += '<p><b><font size=4>Answer Options</font></b></p>'
+            out += f'<p><b><font size={size}>Answer Options</font></b></p>'
             
             answer_options = self.versions[i]['answer_options'].copy()
             if COLAB:
@@ -554,7 +554,7 @@ class Question:
             elif self.type == 'MT':
                 for ao in answer_options:
                     out += f'{ao}'    
-        out += '<hr>'
+        out += '<br/><br/><hr>'
         return out
     
     def display_versions(self, size=3, limit=None, compact_answers=False, show_seeds=False):    
@@ -594,7 +594,7 @@ class Question:
         display(Latex(""))
         
         # Diplaying Versions Header
-        display(HTML('<b><font size=5>Displaying Versions</font></b>' ))
+        display(HTML(f'<b><font size=5>Displaying Versions</font></b>' ))
         
         # Add Versions
         for i in range(limit):
@@ -627,7 +627,7 @@ class Question:
             #-----------------------------------------------
             # Display Answers
             #-----------------------------------------------
-            display(HTML('<b><font size=4>Answer Options</font></b>'))
+            display(HTML(f'<b><font size={size}>Answer Options</font></b>'))
             
             answer_options = self.versions[i]['answer_options'].copy()
             if COLAB:
