@@ -19,6 +19,8 @@ class Question:
         self.id = id
         self.type = 'MC'
         self.margin = '0'
+        self.error_log={}
+        self.attempt_counts = {'success':0, 'duplicate':0, 'error':0, 'condition':0}
         
         # Set default delimiters. This can be changed in the CONFIG section of the template.
         self.var_delim = '[[ ]]'     
@@ -268,7 +270,7 @@ class Question:
         
         self.versions = []
         
-        generation_attempts = 0
+        self.num_attempts = 0
         duplicates_encountered = 0
         
         if seed is not None:
@@ -292,8 +294,8 @@ class Question:
             # Attempt to generate a problem
             while True:
                 # Increment counter and check to see if limit has been reached
-                generation_attempts += 1
-                if generation_attempts > max_attempts:
+                self.num_attempts += 1
+                if self.num_attempts > max_attempts:
                     print()
                     #clear_output(wait=True)
                     display(HTML('<b><font color="DC143C" size=5>--VERSION GENERATION FAILED--</font></b>'))
@@ -301,8 +303,8 @@ class Question:
                     #print(f'Failed to generated version number {len(self.versions) +1}.')
                     print(f'{len(self.versions)} versions successfully generated.')
                     print('Consider increasing the max_attempts parameter or adjusting problem template.')
-                    print()
-                    return  
+                    break
+
 
                 #------------------------------------
                 # Generate Seed                 
@@ -342,7 +344,8 @@ class Question:
                     dup = False
                     for v in self.versions:
                         if version['text'] == v['text']:
-                            duplicates_encountered += 1
+                            self.attempt_counts['duplicate'] += 1
+                            #duplicates_encountered += 1
                             dup = True 
                             break
                     if dup: 
@@ -351,9 +354,15 @@ class Question:
                 
                 break  # if here, a version was found
             
+            
+            if self.num_attempts > max_attempts: 
+                self.num_attempts -= 1 # hack
+                break
+            
             #-------------------------------------------------------------
             # If here, a version was found. Add it to list
             #-------------------------------------------------------------
+            self.attempt_counts['success'] += 1
             self.versions.append(version)
             
             # Print update
@@ -361,8 +370,21 @@ class Question:
                 print(f'{i+1} versions generated.')
                 
         print()
+        num_versions = len(self.versions)
         display(HTML('<b><font size=5>Versions Generated</font></b>'))
-        print(f'{generation_attempts} attempts were required to generate {n} versions. {duplicates_encountered} duplicate versions were generated and discarded.\n\n')
+        print(f'{self.num_attempts} attempts were required to generate {num_versions} versions.')
+        print(f'{self.attempt_counts["duplicate"]} duplicate versions were generated and discarded.')
+        print(f'{self.attempt_counts["condition"]} attempts failed to satisfy the conditions.')
+        print(f'{self.attempt_counts["error"]} attempts resulted in errors.\n')
+        
+        if report_errors and len(self.error_log) > 0:
+            display(HTML('<b><font size=5>Errors Encountered</font></b>'))
+            for e,v in self.error_log.items():
+                display(HTML(f'The following error occurred {v["count"]} times:'))
+                print('   ', e)
+                display(HTML(f'Relevant seed values:'))
+                print(v['seeds'])
+            #print(self.error_log)
         
 
     def generate_one(self, seed, report_errors=True):
@@ -405,8 +427,14 @@ class Question:
         try:
             exec(self.var_script, scope)
         except Exception as e:
-            if report_errors:
-                print(f'ERROR: {e} (seed={seed})')
+            self.attempt_counts['error'] += 1
+            # Log the Error
+            e = repr(e)
+            if e not in self.error_log.keys(): self.error_log[e] = {'count':0, 'seeds':[]}
+            self.error_log[e]['count'] += 1
+            self.error_log[e]['seeds'].append(seed)
+            #if report_errors:
+            #    print(f'ERROR: {e} (seed={seed})')
             version_dict['status'] = 'Error'
             for k in pre_scope.keys(): del scope[k]
             return version_dict
@@ -421,6 +449,7 @@ class Question:
         for cond in self.conditions:
             valid = eval(cond, scope)
             if not valid:
+                self.attempt_counts['condition'] += 1
                 version_dict['status'] = 'Conditions Failed'
                 for k in pre_scope.keys(): del scope[k]
                 return version_dict
