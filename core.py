@@ -494,8 +494,8 @@ class Question:
         
         # Check to see if versions have been created. 
         if len(self.versions) == 0:
-            out = 'No versions have been generated. Please call the <code>generate()</code> method.'
-            #print('No versions have been generated. Please call the generate() method.')
+            out = '<b><font size=5>No Versions to Display</font></b>\n'
+            out += 'No versions have been generated.</code> method.'
             return out
         
         # Determine number to display 
