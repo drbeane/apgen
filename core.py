@@ -327,7 +327,6 @@ class Question:
                 #-------------------------------------------------------------
                 np.random.set_state(np_state)
                 
-                 
                 #-------------------------------------------------------------
                 #  Check if version was generated sucessfully. 
                 #  (no errors + conditions met)
@@ -433,8 +432,6 @@ class Question:
             if e not in self.error_log.keys(): self.error_log[e] = {'count':0, 'seeds':[]}
             self.error_log[e]['count'] += 1
             self.error_log[e]['seeds'].append(seed)
-            #if report_errors:
-            #    print(f'ERROR: {e} (seed={seed})')
             version_dict['status'] = 'Error'
             for k in pre_scope.keys(): del scope[k]
             return version_dict
@@ -447,7 +444,18 @@ class Question:
         
         # Check conditions
         for cond in self.conditions:
-            valid = eval(cond, scope)
+            try:
+                valid = eval(cond, scope)
+            except Exception as e:
+                self.attempt_counts['error'] += 1
+                e = repr(e)
+                if e not in self.error_log.keys(): self.error_log[e] = {'count':0, 'seeds':[]}
+                self.error_log[e]['count'] += 1
+                self.error_log[e]['seeds'].append(seed)
+                version_dict['status'] = 'Error'
+                for k in pre_scope.keys(): del scope[k]
+                return version_dict
+                
             if not valid:
                 self.attempt_counts['condition'] += 1
                 version_dict['status'] = 'Conditions Failed'
@@ -460,8 +468,11 @@ class Question:
             text_w_vars = insert_vars(self.text, scope)
             ans_w_vars = [insert_vars(ao, scope) for ao in self.answer_options]
         except Exception as e:
-            if report_errors:
-                print(f'ERROR: {e} (seed={seed})')
+            self.attempt_counts['error'] += 1
+            e = repr(e)
+            if e not in self.error_log.keys(): self.error_log[e] = {'count':0, 'seeds':[]}
+            self.error_log[e]['count'] += 1
+            self.error_log[e]['seeds'].append(seed)
             version_dict['status'] = 'Error'
             for k in pre_scope.keys(): del scope[k]
             return version_dict
