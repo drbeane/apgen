@@ -495,7 +495,7 @@ class Question:
         # Check to see if versions have been created. 
         if len(self.versions) == 0:
             out = '<b><font size=5>No Versions to Display</font></b>\n'
-            out += 'No versions have been generated.</code> method.'
+            out += '<p>No versions have been generated.</p>'
             return out
         
         # Determine number to display 
