@@ -33,6 +33,7 @@ class Question:
         self.text = ''               # Store the processed text (w/o var eval). 
         self.answer_options = []
         self.versions = []
+        self.max_versions = float('inf')
         
         # Check if a template has been provided. 
         if qt is None and file is None:
@@ -91,6 +92,8 @@ class Question:
                     self.margin = value
                 elif param == 'id':
                     self.id = value
+                elif param == 'max_versions':
+                    self.max_versions = int(value)
             
             #-----------------------------------------------
             # VARIABLES
@@ -810,8 +813,15 @@ def evaluate_and_format_var(x, scope):
     # Need to re-round values if evaluating an expression
     var_name = tokens[0]
     value = eval(var_name, scope)  
+    
+    if type(value) == np.str_: value = str(value)
+    elif type(value) == np.float64: value = float(value)
+    elif type(value) == np.int32: value = int(value)
+    
     if type(value) == float:
-        value = round(value, 12)  
+        value = round(value, 12)
+        if value == int(value):
+            value = int(value)
     
     
     # Return if there is no format string
@@ -843,14 +853,14 @@ def evaluate_and_format_var(x, scope):
         if value >= 0: return formatted_value             #  x -->  x    
         if value < 0: return  formatted_value             # -x --> -x
     
-    # Check to see if number is a leading coefficient
+    # Check to see if number is a non-leading coefficient
     if 'b' in formatting.lower():
         if value == 1: return '+ '                        #  1 -->  +
         if value == -1: return '- '                       # -1 -->  -
         if value >= 0: return '+ ' + formatted_value      #  x --> +x    
         if value < 0: return  '- ' + formatted_value[1:]  # -x --> -x
         
-    # Check to see if number is a leading coefficient
+    # Check to see if number is a additive constant
     if 'c' in formatting.lower():
         if value >= 0: return '+ ' + formatted_value      #  x --> +x    
         if value < 0: return  '- ' + formatted_value[1:]  # -x --> -x
