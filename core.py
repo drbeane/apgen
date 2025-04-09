@@ -125,6 +125,8 @@ class Question:
             elif mode == '#---ANSWER_OPTIONS---#':
                 self.answer_options.append(line)
   
+        self.var_script = self.var_script.replace('^', '**')
+  
 
     def __INIT__parse_text(self):
         self.text_raw = self.text_raw.strip()
