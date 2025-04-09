@@ -218,15 +218,27 @@ def DISTRACTORS_A(ans, n=4, step=1, seed=None):
     return distractors
 
 
-def DISTRACTORS(ans, n=4, p_rng=None, step=None, digits=None, nearest=None, seed=None):
+def DISTRACTORS(ans, n=4, prop=None, p_rng=None, step=None, digits=None, nearest=None, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
     # if no step is provided, determine step using p_range
-    if step is None: 
-        if p_rng is None: p_rng = [0.03, 0.06]
+    if step is not None: 
+        pass
+    elif prop is not None:
+        step = ans*prop
+    elif p_rng is not None:
         p = np.random.uniform(p_rng[0], p_rng[1])
         step = ans*p
+    else:
+        p = np.random.uniform(0.03, 0.06)
+        step = ans*p
+        
+    
+    #if step is None: 
+    #    if p_rng is None: p_rng = [0.03, 0.06]
+    #    p = np.random.uniform(p_rng[0], p_rng[1])
+    #    step = ans*p
     
     # Determine position for correct answer
     k = np.random.choice(range(n+1))
