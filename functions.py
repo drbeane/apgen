@@ -72,9 +72,9 @@ def RANGE(start, stop, step, exclude=None, repeat=True, size=None,
     return SAMPLE(start=start, stop=stop, step=step, exclude=exclude, repeat=repeat, 
            size=size, min_diff=min_diff, max_attempts=max_attempts)    
 
-def SELECT(values):
+def SELECT(values, repeat=True):
     import numpy as np
-    return np.random.choice(values)
+    return np.random.choice(values, replace=repeat)
     
 def COND(max_attempts=1000, conds=[], **kwargs):
     
