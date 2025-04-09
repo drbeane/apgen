@@ -819,7 +819,7 @@ def evaluate_and_format_var(x, scope):
     elif type(value) == np.int32: value = int(value)
     
     if type(value) == float:
-        value = round(value, 12)
+        value = round(value, 10)
         if value == int(value):
             value = int(value)
     

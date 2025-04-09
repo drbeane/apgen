@@ -369,7 +369,7 @@ class makeQTI():
             # process superscript
             text = re.sub(r'(\^{1}([\W\w\s]+?)\^{1})', '<sup>\\2</sup>', text)
             # process subscript
-            text = re.sub(r'(\~{1}([\W\w\s]+?)\~{1})', '<sub>\\2</sub>', text)
+            #text = re.sub(r'(\~{1}([\W\w\s]+?)\~{1})', '<sub>\\2</sub>', text)
             # escape html characters
             text = html.escape(text)
             # return

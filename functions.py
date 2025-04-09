@@ -1,49 +1,46 @@
 import numpy as np
 import scipy.stats
 
-def RANGE(start, stop, step, exclude=None, repeat=True, size=None, shape=None, 
-          length=None, min_diff=None, max_attempts=1000):
+#----------------------------------------------------------------------
+# Sampling Functions
+#----------------------------------------------------------------------
+
+def SAMPLE(start, stop, step, exclude=None, repeat=True, size=None,
+           min_diff=None, max_attempts=1000):
     
     
-    # Clean this up. Do away with length and shape parameters entirely. 
-    if size is not None:
-        if np.array(size).ndim == 0:
-            length = size
-        else:
-            shape = size
+    # Determine the number of values to sample. 
+    n = 1 if size is None else np.prod(size)
     
-    if length is not None:
-        n = length
-    elif shape is not None:
-        n = np.prod(shape)
-    else:
-        n = 1
-    
-    
+        
     # Loop until an appropriate colleciton is found
-    # This loop will restart ONLY if we have run out of acceptable options. 
+    # This loop will restart if we run out of acceptable options or a condition fails.
     for _ in range(max_attempts):
         
-        values = []
-        # Build list of options
-        options = np.arange(start, stop+step, step).round(10).tolist()
-        #options = [ROUND(o,nearest=step) for o in options]
+        sample_values = []   # List to store sampled values
         
+        # Build list of options
+        options = np.arange(start, stop+step, step).round(12).tolist()
+        
+        # Remove exluded values
         if exclude is not None:
             options = [v for v in options if v not in exclude]
         
-        failed = False
+        
         # Loop to generate required number of values
-        for i in range(n):
+        failed = False
+        for _ in range(n):
             
+            # Check to see if we have run out of valid options. 
             if len(options) == 0:
                 failed = True
-                break  # We have failed and need to start over. 
+                break  
             
-            x = np.random.choice(options)     # Select a value
-            values.append(x)
+            # Sample a single value. 
+            x = np.random.choice(options)
+            sample_values.append(x)
             
-            # Remove from list if repeats not allowed
+            # Remove value from options if sampling w/o replacement
             if repeat == False:
                 options.remove(x)
             
@@ -51,21 +48,60 @@ def RANGE(start, stop, step, exclude=None, repeat=True, size=None, shape=None,
             if min_diff is not None:
                 options = [v for v in options if round(abs(x - v), 10) >= min_diff]
 
-        # Return values if they were found. Otherwise, restart the loop.         
+    
+        #----------------------------------------------------------------
+        # Return values if they were found. Otherwise, restart the loop. 
+        #----------------------------------------------------------------                
         if failed == False:
-            
-            if shape is None and length is None:
-                return values[0]
+                        
+            if size is None:
+                return sample_values[0]
 
-            if length is not None:
-                return values
+            if np.array(size).ndim == 0:
+                return sample_values
 
-            if shape is not None:
-                return np.array(values).reshape(shape)
+            if np.array(size).ndim == 1:
+                return np.array(sample_values).reshape(size)
         
     print('Unable to find values satifying the given criteria.')           
             
 
+def RANGE(start, stop, step, exclude=None, repeat=True, size=None, 
+          min_diff=None, max_attempts=1000):
+
+    return SAMPLE(start=start, stop=stop, step=step, exclude=exclude, repeat=repeat, 
+           size=size, min_diff=min_diff, max_attempts=max_attempts)    
+
+def SELECT(values):
+    import numpy as np
+    return np.random.choice(values)
+    
+def COND(max_attempts=1000, conds=[], **kwargs):
+    
+    for _ in range(max_attempts):
+        vars = {}
+        for k,v in kwargs.items():
+            vars[k] = eval(v)
+        
+        cond_scope = vars.copy()
+        conds_satisfied = True
+        for c in conds:
+            exec(f'cond_val={c}', cond_scope)
+            if cond_scope['cond_val'] == False:
+                conds_satisfied = False
+                break
+        
+        if conds_satisfied:
+            return vars
+    
+    raise Exception('Failed to generate values satisfying conditions.')
+    
+    
+#----------------------------------------------------------------------
+# Basic Math Functions
+#----------------------------------------------------------------------
+
+    
 def EXP(x):
     return float(np.exp(x))
 
@@ -94,29 +130,46 @@ def ROUND(x, digits=None, nearest=None):
 def DIFF(x, y):
     return abs(x - y)
 
-def MIN_DIFF(values):
-    n = len(values)
+def MIN_DIFF(*args):
+    
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) in [list, tuple, np.ndarray]:
+        args = args[0]
+        
+    n = len(args)
     min_diff = None
+    
+    
     for i in range(0, n):
         for j in range(i+1, n):
-            diff = abs(values[i] - values[j])
+            diff = abs(args[i] - args[j])
             if min_diff is None:
                 min_diff = diff
             elif diff < min_diff:
                 min_diff = diff
-    return min_diff
+    
+    return round(min_diff, 10)
 
-def MAX_DIFF(values):
-    n = len(values)
+def MAX_DIFF(*args):
+    
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) in [list, tuple, np.ndarray]:
+        args = args[0]
+    
+    n = len(args)
     max_diff = None
+    
     for i in range(0, n):
         for j in range(i+1, n):
-            diff = abs(values[i] - values[j])
+            diff = abs(args[i] - args[j])
             if max_diff is None:
                 max_diff = diff
             elif diff > max_diff:
                 max_diff = diff
-    return max_diff
+    
+    return round(max_diff, 10)
 
 
 def NOT(b):
@@ -127,12 +180,18 @@ def EXACT_TO(x, digits):
     return ROUND(x, digits=digits) == x
 
 
-def UNIQUE(values):
-    n1 = len(values)
-    n2 = len(np.unique(values))
+def UNIQUE(*args):
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) == list:
+        args = args[0]
+        
+    n1 = len(args)
+    n2 = len(np.unique(args))
     if n1 != n2: 
         return False
-    return True
+    return True    
+
 
 def FLOOR(x):
     import math
@@ -153,7 +212,7 @@ def DISTRACTORS_A(ans, n=4, step=1, seed=None):
     distractors = []
     for i in range(-k, n-k+1):
         if i == 0: continue
-        d = ans + i
+        d = ans + i*(step)
         distractors.append(d)
 
     return distractors
@@ -198,17 +257,38 @@ def PERM(n, r):
     assert(r == int(r))
     return FACT(n) / FACT(n - r) 
 
-def MIN(values):
-    return min(values)
+def MIN(*args):
+    
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) == list:
+        args = args[0]
+    
+    return min(args)
 
-def MAX(values):
-    return max(values)
+def MAX(*args):
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) == list:
+        args = args[0]
+        
+    return max(args)
 
-def ARGMIN(values, axis=None):
-    return np.argmin(values, axis=axis)
+def ARGMIN(*args):
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) == list:
+        args = args[0]
+        
+    return np.argmin(args)
 
-def ARGMAX(values, axis=None):
-    return np.argmax(values, axis=axis)
+def ARGMAX(*args):
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) == list:
+        args = args[0]
+        
+    return np.argmax(args)
 
 def WHERE(cond, a, b):
     return np.where(cond, a, b)
@@ -244,8 +324,14 @@ def INV_NORMAL_CDF(q, mean=0, sd=1):
     return norm.ppf(q=q, loc=mean, scale=sd)
 
 
-def SUM(values):
-    return sum(values)
+def SUM(*args):
+    
+    # This is just used to allow values to be provided as a list. 
+    # That should probably be deprecated. 
+    if len(args) == 1 and type(args[0]) == list:
+        args = args[0]
+    
+    return sum(args)
 
 def ABS(x):
     return abs(x)
@@ -253,9 +339,7 @@ def ABS(x):
 def SUMMATION(start, end, fn):
     return sum([fn(x) for x in range(start, end+1)])
 
-def SELECT(values):
-    import numpy as np
-    return np.random.choice(values)
+
 
 
 def GCD(a, b):
@@ -565,22 +649,31 @@ def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None, max_iter=10000):
 
 
 if __name__ == '__main__':
-    #print(RANGE(10, 150, 5))
-    #print(ROUND(36.5, 5))
-    #print(EXACT_TO(3.47, 0.1))
-    #print(not EXACT_TO(3.47, 0.1))
     
-    #print(UNIQUE([2, 3, 4]))
-    #print(UNIQUE([2, 3, 4.01, 4 + 1/100]))
     
-    #print(MIN([5, 7, 10]))
+    w = RANGE(10, 1000, 1, size=6, min_diff=5)
+    p = w / SUM(w)
+    p = p.round(2)
+    p[5] += 1 - p.sum()
+
+    print(w)
+    print(p)    
     
-    #f = lambda x : x**2
+    x = MIN_DIFF(p)
+    print(x)
     
-    #print(SUMMATION(1, 5, f))
+    '''
+    x = COND(
+        x='SAMPLE(1,10,1)',
+        y='SAMPLE(1,10,1)',
+        z='SAMPLE(1,10,1)',
+        conds=[
+            'x < y', 
+            'x < z', 
+            'y < z'
+        ]
+    )
     
-    #print(QUAD(1, -5, 6))
-    
-    #print(DISTRACTORS(ans=37, step=1))
-    
-    print(TVM_SOLVER(N=20, I=None, PV=-1000, PMT=50, FV=20000))
+    b = UNIQUE([6, 7, 8])
+    print(b)
+    '''
