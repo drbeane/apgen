@@ -63,6 +63,7 @@ class Question:
         lines = self.qt.split('\n')
         
         for line in lines:
+            
             #line = line.strip()
             
             #-----------------------------------------------------
@@ -75,7 +76,7 @@ class Question:
             # Determine the mode
             #-----------------------------------------------
             elif line[:4] == '#---':
-                mode = line
+                mode = line.strip()
             
             #-----------------------------------------------
             # config
@@ -111,6 +112,7 @@ class Question:
             #  CONDITIONS
             #-----------------------------------------------
             elif mode == '#---CONDITIONS---#':
+                print('Found')
                 self.conditions.append(line)
                 
             #-----------------------------------------------

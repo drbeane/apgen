@@ -123,9 +123,15 @@ def ROUND(x, digits=None, nearest=None):
         return round(x, digits)
     
     if nearest is not None:
-        x = round(x / nearest) * nearest
-        x = round(x, 10)
-        return x
+        if nearest > 1:
+            x = round(x / nearest) * nearest
+            x = round(x, 10)
+            return x
+        else:
+            d = x - int(x)
+            new_d = round(d / nearest) * nearest
+            new_d = round(new_d, 10)
+            return int(x) + new_d
 
 def DIFF(x, y):
     return abs(x - y)
@@ -179,6 +185,12 @@ def NOT(b):
 def EXACT_TO(x, digits):
     return ROUND(x, digits=digits) == x
 
+
+def NOT_EXACT_TO(x, digits):
+    return NOT(EXACT_TO(x, digits))
+
+def NEXTO(x, digits):
+    return NOT_EXACT_TO(x, digits)
 
 def UNIQUE(*args):
     # This is just used to allow values to be provided as a list. 
@@ -331,9 +343,15 @@ def NORMAL_CDF(x, mean=0, sd=1):
     from scipy.stats import norm
     return norm.cdf(x=x, loc=mean, scale=sd)
     
-def INV_NORMAL_CDF(q, mean=0, sd=1):
+def INV_NORMAL_CDF(p, mean=0, sd=1):
     from scipy.stats import norm
-    return norm.ppf(q=q, loc=mean, scale=sd)
+    return norm.ppf(q=p, loc=mean, scale=sd)
+
+def PNORM(x, mean=0, sd=1):
+    NORMAL_CDF(x, mean=mean, sd=sd)
+
+def QNORM(p, mean=0, sd=1):
+    INV_NORMAL_CDF(p, mean=mean, sd=sd)
 
 
 def SUM(*args):
@@ -662,17 +680,13 @@ def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None, max_iter=10000):
 
 if __name__ == '__main__':
     
+    x = 5.000003
     
-    w = RANGE(10, 1000, 1, size=6, min_diff=5)
-    p = w / SUM(w)
-    p = p.round(2)
-    p[5] += 1 - p.sum()
-
-    print(w)
-    print(p)    
+    print(NOT_EXACT_TO(x, 4))
+    print(NOT_EXACT_TO(x, 5))
+    print(NOT_EXACT_TO(x, 6))
+    print(NOT_EXACT_TO(x, 7))
     
-    x = MIN_DIFF(p)
-    print(x)
     
     '''
     x = COND(
