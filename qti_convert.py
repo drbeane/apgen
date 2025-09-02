@@ -137,6 +137,7 @@ class makeQTI():
                    
         def run(self, create_files=True, seeds='hide'):
             from IPython.core.display import HTML, display
+            import time
             
             #-----------------------------------------------
             #  1.  Create Header and Footer.
@@ -257,7 +258,13 @@ class makeQTI():
                 #mydata = ET.tostring(root, encoding='utf8').decode('utf8')
                 mydata = ET.tostring(root).decode()
                 
-                myfile = open(str(self.outFile), 'w')
+                for i in range(20):
+                    try:
+                        myfile = open(str(self.outFile), 'w')
+                        break
+                    except:
+                        time.sleep(1)
+                        
                 myfile.write(mydata)
                 myfile.close()
             
@@ -268,9 +275,15 @@ class makeQTI():
                 # compress the folder
                 shutil.make_archive(str(self.newDirPath), 'zip', str(self.newDirPath))
                 #remove the now compressed folder
-                import time
-                time.sleep(3)
-                shutil.rmtree(str(self.newDirPath), ignore_errors=False)
+                
+                
+                for i in range(20):
+                    try:
+                        shutil.rmtree(str(self.newDirPath), ignore_errors=False)
+                        break
+                    except:
+                        time.sleep(1)
+                
             
 
         

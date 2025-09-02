@@ -112,7 +112,6 @@ class Question:
             #  CONDITIONS
             #-----------------------------------------------
             elif mode == '#---CONDITIONS---#':
-                print('Found')
                 self.conditions.append(line)
                 
             #-----------------------------------------------
@@ -261,7 +260,7 @@ class Question:
     # generate function creates versions from template
     #------------------------------------------------------------
     def generate(self, n=1, seed=None, max_attempts=100_000, prevent_duplicates=True, 
-                 progress_bar=False, updates=None, report_errors=True):
+                 progress_bar=False, updates=None, report_errors=True, output='standard'):
         '''
         Description: Creates versions from template
         
@@ -374,23 +373,28 @@ class Question:
             # Print update
             if updates is not None and i % updates == 0:
                 print(f'{i+1} versions generated.')
-                
-        print()
-        num_versions = len(self.versions)
-        display(HTML('<b><font size=5>Versions Generated</font></b>'))
-        print(f'{self.num_attempts} attempts were required to generate {num_versions} versions.')
-        print(f'{self.attempt_counts["duplicate"]} duplicate versions were generated and discarded.')
-        print(f'{self.attempt_counts["condition"]} attempts failed to satisfy the conditions.')
-        print(f'{self.attempt_counts["error"]} attempts resulted in errors.\n')
         
-        if report_errors and len(self.error_log) > 0:
-            display(HTML('<b><font size=5>Errors Encountered</font></b>'))
-            for e,v in self.error_log.items():
-                display(HTML(f'The following error occurred {v["count"]} times:'))
-                print('   ', e)
-                display(HTML(f'Relevant seed values:'))
-                print(v['seeds'])
-            #print(self.error_log)
+        num_versions = len(self.versions)
+        if output == 'standard':        
+            print()
+            
+            display(HTML('<b><font size=5>Versions Generated</font></b>'))
+            print(f'{self.num_attempts} attempts were required to generate {num_versions} versions.')
+            print(f'{self.attempt_counts["duplicate"]} duplicate versions were generated and discarded.')
+            print(f'{self.attempt_counts["condition"]} attempts failed to satisfy the conditions.')
+            print(f'{self.attempt_counts["error"]} attempts resulted in errors.\n')
+            
+            if report_errors and len(self.error_log) > 0:
+                display(HTML('<b><font size=5>Errors Encountered</font></b>'))
+                for e,v in self.error_log.items():
+                    display(HTML(f'The following error occurred {v["count"]} times:'))
+                    print('   ', e)
+                    display(HTML(f'Relevant seed values:'))
+                    print(v['seeds'])
+                #print(self.error_log)
+        
+        if output == 'compact':
+            print(f'{self.id:<24}  -- {self.num_attempts:>5} attempts  -- {num_versions:>3} versions')
         
 
     def generate_one(self, seed, report_errors=True):
@@ -737,7 +741,7 @@ class Question:
         v = self.versions[i]
         version_details(v, flags=flags)
            
-    def generate_qti(self, path='', overwrite=True, shuffle=True, save_template=False, seeds='hide', create_files=True):
+    def generate_qti(self, path='', overwrite=True, shuffle=True, save_template=False, seeds='hide', create_files=True, verbose=True):
         from apgen.qti_convert import makeQTI
         import os
         
@@ -761,7 +765,7 @@ class Question:
             with open(f'{path}/{self.id}.txt', 'w', encoding="utf-8") as f:
                 f.write(self.qt)
         
-        if create_files:
+        if create_files and verbose:
             print('QTI file created successfully')
         
       
