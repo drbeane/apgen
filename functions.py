@@ -327,7 +327,8 @@ def MNAME():
         'Lucas', 'Matt', 'Milo', 'Nathan', 'Nick', 'Oliver', 'Owen', 'Paul', 'Phillip', 'Quentin', 'Quinn', 
         'Rick', 'Rodney', 'Shawn', 'Scott', 'Toby', 'Tyler', 'Vince', 'Vernon', 'Wade', 'William', 'Zack'
     ]
-    return np.random.choice(names)
+    name = np.random.choice(names)
+    return '__NAMEa__' + name + '__NAMEb__'
 
 def FNAME():
     names = [
@@ -336,7 +337,8 @@ def FNAME():
         'Lori', 'Leah', 'Marie', 'Megan', 'Nikki', 'Norah', 'Olivia', 'Ophelia', 'Paige', 'Paula', 'Rachel', 
         'Rose', 'Sadie', 'Selena', 'Tina', 'Tess', 'Vera', 'Vicky', 'Wendy', 'Willa', 'Yolanda', 'Yvonne', 'Zora', 'Zena'
     ]
-    return np.random.choice(names)
+    name = np.random.choice(names)
+    return '__NAMEa__' + name + '__NAMEb__'
 
 
 def NORMAL_CDF(x, mean=0, sd=1):
@@ -569,9 +571,6 @@ def TABLE(contents, config=None, rlab=None, clab=None, inc_margin=True):
     
     return t
 
-
-
-
 def ANNUITY_PV(n, i, due=False):
     v = 1/(1+i)
     pv = (1 - v**n) / i
@@ -680,12 +679,17 @@ def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None, max_iter=10000):
 
 if __name__ == '__main__':
     
-    x = 5.000003
+    #x = 5.000003
     
-    print(NOT_EXACT_TO(x, 4))
-    print(NOT_EXACT_TO(x, 5))
-    print(NOT_EXACT_TO(x, 6))
-    print(NOT_EXACT_TO(x, 7))
+    #print(NOT_EXACT_TO(x, 4))
+    #print(NOT_EXACT_TO(x, 5))
+    #print(NOT_EXACT_TO(x, 6))
+    #print(NOT_EXACT_TO(x, 7))
+    
+    
+    i = TVM_SOLVER(N=10, I=None, PV=-100, PMT=10, FV=50)
+    
+    print(i)
     
     
     '''

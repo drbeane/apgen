@@ -3,24 +3,22 @@ from apgen.functions import *
 
 class Question:
 
-    def __init__(self, qt=None, file=None, id=None):
+    def __init__(self, qt=None, file=None):
         '''
         Class representing a single question. 
         
         PARAMETERS
         file : path for file containing question template
         qt   : string containing question template
-        id   : identifier for problem (deprecated. id should be contained in template)
         '''
         
         # Create some basic attributes
         self.file = file             
         self.qt = qt
-        self.id = id
         self.type = 'MC'
         self.margin = '0'
         self.error_log={}
-        self.attempt_counts = {'success':0, 'duplicate':0, 'error':0, 'condition':0}
+        self.attempt_counts = {}  # Used during version generation
         
         # Set default delimiters. This can be changed in the CONFIG section of the template.
         self.var_delim = '[[ ]]'     
@@ -51,11 +49,11 @@ class Question:
         self.qt = self.qt.strip()
 
         # Parse the template and text
-        self.__INIT__parse_template()
-        self.__INIT__parse_text()
+        self.__parse_template__()
+        self.__parse_text__()
         
 
-    def __INIT__parse_template(self):
+    def __parse_template__(self):
         
         mode = None
         
@@ -126,13 +124,14 @@ class Question:
             elif mode == '#---ANSWER_OPTIONS---#':
                 self.answer_options.append(line)
   
+        # Line below allows users to use ^ for exponentiation. 
         self.var_script = self.var_script.replace('^', '**')
   
 
-    def __INIT__parse_text(self):
+    def __parse_text__(self):
         self.text_raw = self.text_raw.strip()
         
-        sections = []
+        self.text_sections = []
         
         cur_sec = {'mode':'text', 'prev':None, 'next':None, 'lines':[]}
         
@@ -144,6 +143,7 @@ class Question:
             
             #---------------------------------------
             # Determine new mode
+            # -- blank, table, list, eqn, text
             #---------------------------------------
             stripped = line.strip(' ')
             if stripped == '':
@@ -152,8 +152,10 @@ class Question:
                 mode = 'table'
             elif stripped[0] == '*':
                 mode = 'list'
+                
+            # Check for non-inline equations. Nothing happens with inline equations yet. 
             elif stripped[0] == '$' and stripped[-1] == '$':
-                mode = 'eqn'
+                mode = 'eqn' 
             else:
                 mode = 'text'
             
@@ -166,30 +168,30 @@ class Question:
             else:
                 cur_sec['next'] = mode
                 old_mode = cur_sec['mode']
-                sections.append(cur_sec)
+                self.text_sections.append(cur_sec)
                 cur_sec = {'mode':mode, 'prev':old_mode, 'next':None, 'lines':[line]}
             
             if stripped == 'END TABLE':
                 mode = None
        
         
-        sections.append(cur_sec)
+        self.text_sections.append(cur_sec)
     
         # This is just for testing. Lets me get some info about the sections. 
-        for s in sections:
+        for s in self.text_sections:
             #print(s)
             temp = s.copy()
             temp['lines'] = len(temp['lines'])
             #print(temp)
 
         text = ''
-        for s in sections:
-            text += self.__INIT__process_section(s)
+        for s in self.text_sections:
+            text += self.__process_section__(s)
         
         self.text = text
         
         
-    def __INIT__process_section(self, s):
+    def __process_section__(self, s):
         text = ''
         
         if s['mode'] == 'text':
@@ -220,10 +222,10 @@ class Question:
             
             # End list
             text += '</ul>\n'
-            
+        
+        # This is just for non-inline equations. 
+        # Determines if the equation should be centered, tabbed, or left-aligned. 
         elif s['mode'] == 'eqn':
-            #K = 0 if (N <= 1 or s['next'] is None) else N
-            #bp = '<br/>' * K
             
             for line in s['lines']:  # There should always be only one line in an EQN section. 
                 if line[:2] == '$$':
@@ -259,25 +261,30 @@ class Question:
     #------------------------------------------------------------
     # generate function creates versions from template
     #------------------------------------------------------------
-    def generate(self, n=1, seed=None, max_attempts=100_000, prevent_duplicates=True, 
-                 progress_bar=False, updates=None, report_errors=True, output='standard'):
-        '''
-        Description: Creates versions from template
+    def generate(self, n=1, seed=None, time_limit=None, max_attempts=100_000, prevent_duplicates=True, 
+                 safe_mode=False, progress_bar=False, updates=None, report_errors=True, compact_output=False):
         
-        Paramters:
-        n                  : Number of versions to generate.
-        attempts           : Total number of attempts allowed to generate n questions
-        prevent_duplicates : If true, question texts are compared and repeats are discarded. 
-        seed               : Seed for RNG
-        '''
+        #-------------------------------------------------------------------------------------------------
+        #  Description: Creates versions from template
+        #-------------------------------------------------------------------------------------------------
+        #  Paramters:
+        #  n                  : Number of versions to generate.
+        #  max_attempts           : Total number of attempts allowed to generate n questions
+        #  time_limt          : Time limit for version generation
+        #  prevent_duplicates : If true, question texts are compared and repeats are discarded. 
+        #  seed               : Seed for RNG
+        #  compact_output     : Compact output primarily used for batch generation. 
+        #-------------------------------------------------------------------------------------------------
+        
         
         from IPython.core.display import HTML, display
         from tqdm.notebook import tqdm
+        import time
+        import re
         
         self.versions = []
         
         self.num_attempts = 0
-        duplicates_encountered = 0
         
         if seed is not None:
             # This sets the "global" seed for the generation process.
@@ -291,30 +298,58 @@ class Question:
         else:
             my_range = range(n)
         
+        #-------------------------------------------------------------------
+        # Dict for counting results
+        #-------------------------------------------------------------------
+        self.attempt_counts = {'success':0, 'duplicate':0, 'error':0, 'condition':0}
         
-        # Loop for the desired number of questions
+        #-------------------------------------------------------------------
+        # Time and flag for checking time limit and max versions.
+        #-------------------------------------------------------------------
+        t0 = time.time()
+        limit_reached = False
+        
+        #-------------------------------------------------------------------
+        # Loop for the desired number of versions
+        #-------------------------------------------------------------------
         for i in my_range:
-            #from IPython.display import clear_output
-            #clear_output(wait=True)
             
+            #-------------------------------------------------------------------
             # Attempt to generate a problem
+            #-------------------------------------------------------------------
             while True:
+                
+                #-------------------------------------------------------------------
                 # Increment counter and check to see if limit has been reached
-                self.num_attempts += 1
-                if self.num_attempts > max_attempts:
+                #-------------------------------------------------------------------
+                if self.num_attempts >= max_attempts:
                     print()
-                    #clear_output(wait=True)
                     display(HTML('<b><font color="DC143C" size=5>--VERSION GENERATION FAILED--</font></b>'))
                     print(f'Failed to generate {n} versions in {max_attempts} attempts.')
-                    #print(f'Failed to generated version number {len(self.versions) +1}.')
                     print(f'{len(self.versions)} versions successfully generated.')
                     print('Consider increasing the max_attempts parameter or adjusting problem template.')
+                    limit_reached = True
                     break
 
+                #-------------------------------------------------------------------
+                # Check if time limit reached
+                #-------------------------------------------------------------------
+                dt = time.time() - t0
+                if time_limit is not None and dt > time_limit:
+                    print()
+                    display(HTML('<b><font color="DC143C" size=5>--VERSION GENERATION FAILED--</font></b>'))
+                    print(f'Failed to generate {n} versions in {time_limit} seconds.')
+                    print(f'{len(self.versions)} versions successfully generated.')
+                    print('Consider increasing the time_limit parameter or adjusting problem template.')
+                    limit_reached = True
+                    break
 
-                #------------------------------------
-                # Generate Seed                 
-                #------------------------------------
+                # If limit not reached, move on to next version. 
+                self.num_attempts += 1
+
+                #-------------------------------------------------------------
+                # Generate Seed for current version
+                #-------------------------------------------------------------
                 temp = np.random.uniform(1,10)
                 version_seed = int(100000*temp)
                 
@@ -323,9 +358,9 @@ class Question:
                 #-------------------------------------------------------------
                 np_state = np.random.get_state()
                                 
-                #------------------------------------
+                #-------------------------------------------------------------
                 # Attempt to Generate a Version
-                #------------------------------------
+                #-------------------------------------------------------------
                 version = self.generate_one(version_seed, report_errors)
                 
                 #-------------------------------------------------------------
@@ -346,11 +381,17 @@ class Question:
                 #  If so, restart loop and try again
                 #-------------------------------------------------------------
                 if prevent_duplicates:
+                    
+                    # Names need to be stripped out since they mess up the duplicate checking process
+                    text_no_names = re.sub(r'__NAMEa__.*?__NAMEb__', '', version['text'])
+                    
                     dup = False
                     for v in self.versions:
-                        if version['text'] == v['text']:
+                        other_text = re.sub(r'__NAMEa__.*?__NAMEb__', '', v['text'])
+                        
+                        if text_no_names == other_text:
+                        #if version['text'] == v['text']:
                             self.attempt_counts['duplicate'] += 1
-                            #duplicates_encountered += 1
                             dup = True 
                             break
                     if dup: 
@@ -360,8 +401,10 @@ class Question:
                 break  # if here, a version was found
             
             
-            if self.num_attempts > max_attempts: 
-                self.num_attempts -= 1 # hack
+            #-------------------------------------------------------------
+            # Check if a limit was reached. If so, exit. 
+            #-------------------------------------------------------------
+            if limit_reached:
                 break
             
             #-------------------------------------------------------------
@@ -374,8 +417,32 @@ class Question:
             if updates is not None and i % updates == 0:
                 print(f'{i+1} versions generated.')
         
+        
+        
+        #-------------------------------------------------------------
+        # Version generation complete (or terminated, at least)
+        #-------------------------------------------------------------
+        
+        #-------------------------------------------------------------
+        # Time to remove name delimiters
+        #-------------------------------------------------------------
+        for i, v in enumerate(self.versions):
+            self.versions[i]['text'] = self.versions[i]['text'].replace('__NAMEa__', '')
+            self.versions[i]['text'] = self.versions[i]['text'].replace('__NAMEb__', '')
+            self.versions[i]['colab_text'] = self.versions[i]['text'].replace('__NAMEa__', '')
+            self.versions[i]['colab_text'] = self.versions[i]['text'].replace('__NAMEb__', '')
+        
+        #-------------------------------------------------------------
+        # Output results 
+        # -- Standard is typical. 
+        # -- Compact is used for batch processing. 
+        #-------------------------------------------------------------
         num_versions = len(self.versions)
-        if output == 'standard':        
+        
+        if compact_output:
+            print(f'{self.id:<24}  -- {self.num_attempts:>5} attempts  -- {num_versions:>3} versions')
+        
+        else:        
             print()
             
             display(HTML('<b><font size=5>Versions Generated</font></b>'))
@@ -391,10 +458,8 @@ class Question:
                     print('   ', e)
                     display(HTML(f'Relevant seed values:'))
                     print(v['seeds'])
-                #print(self.error_log)
         
-        if output == 'compact':
-            print(f'{self.id:<24}  -- {self.num_attempts:>5} attempts  -- {num_versions:>3} versions')
+        return 
         
 
     def generate_one(self, seed, report_errors=True):
@@ -402,41 +467,42 @@ class Question:
         import warnings
         warnings.filterwarnings('error', category=RuntimeWarning)
         
+        #-------------------------------------------------------------
+        # Set the seed provided
+        #-------------------------------------------------------------
         np.random.seed(seed)
         
-        # Prepare Scope
+        #-------------------------------------------------------------
+        # Prepare the scope. Code will be executed with this scope. 
+        # pre_scope is used to determine what to delete from scope 
+        # after vars have been added
+        #-------------------------------------------------------------
         scope = {}
         exec('from apgen.functions import *', scope)
-        pre_scope = scope.copy()
+        pre_scope = scope.copy()   
         
-        # Create Version Dictionary
-        # Replace with Class later
+        #-------------------------------------------------------------
+        # Create Dictionary for storing information about the version
+        #-------------------------------------------------------------
         version_dict = {
             'status': 'Success',
             'version_seed': seed,
             'text' : None,
             'colab_text': None,
-            'jupyter_text': None,
+            #'jupyter_text': None,
             'qti_text': None,
             'answer_options' : None,
             'var_defns' : scope
         }
         
-        
         #-------------------------------------------------------------
-        # Seed stuff. 
-        # Generate a version seed. 
-        # Store state so that "global" seed can be reinstated later. 
-        # Set version seed. 
-        #-------------------------------------------------------------
-        #version_seed = int(''.join(np.random.choice(list('123456789'), size=6)))
-        #np_state = np.random.get_state()
-        #np.random.seed(version_seed)
-        
         # Execute Variables
+        #-------------------------------------------------------------
         try:
             exec(self.var_script, scope)
+        
         except Exception as e:
+            # Error encountered
             self.attempt_counts['error'] += 1
             # Log the Error
             e = repr(e)
@@ -447,13 +513,16 @@ class Question:
             for k in pre_scope.keys(): del scope[k]
             return version_dict
         
-        
+        #-------------------------------------------------------------
         # Get rid of precision/rounding issues.
+        #-------------------------------------------------------------
         for k, v in scope.items():
             if isinstance(v, float):
                 scope[k] = round(v, 12)
         
-        # Check conditions
+        #-------------------------------------------------------------
+        # Check conditions, return if invalid
+        #-------------------------------------------------------------
         for cond in self.conditions:
             try:
                 valid = eval(cond, scope)
@@ -473,8 +542,9 @@ class Question:
                 for k in pre_scope.keys(): del scope[k]
                 return version_dict
         
-        
-        # Answer Variable Values
+        #-------------------------------------------------------------
+        # Determine Answer Values
+        #-------------------------------------------------------------
         try:
             text_w_vars = insert_vars(self.text, scope)
             ans_w_vars = [insert_vars(ao, scope) for ao in self.answer_options]
@@ -488,58 +558,69 @@ class Question:
             for k in pre_scope.keys(): del scope[k]
             return version_dict
             
-        
-        #del scope['__builtins__']       # Just for tidiness
-        
-        # Clean up the scope. Remove anything not created by var_script
-        
+        #-------------------------------------------------------------
+        # Clean up the scope. 
+        # Remove anything not directly relevant to the problem.
+        #-------------------------------------------------------------
         for k in pre_scope.keys():
             del scope[k]
         
+        #-------------------------------------------------------------
+        # Add the text and answer values to the version dict
+        #-------------------------------------------------------------
         version_dict['text'] = text_w_vars
         version_dict['answer_options'] = ans_w_vars
-        #version_dict = {
-        #    'version_seed': seed,
-        #    'text' : text_w_vars,
-        #    'answer_options' : ans_w_vars,
-        #    'var_defns' : scope.copy()
-        #}
         
         return version_dict
 
 
     def create_display_html(self, size=3, limit=None, compact_answers=False, show_seeds=False):
+        #-------------------------------------------------------------
+        # Creates HTML for displaying question version. 
+        #-------------------------------------------------------------
+        
         from IPython.display import HTML, display, Markdown, Latex, Javascript
         import sys
         
+        #-------------------------------------------------------------
+        # Check if Colab. If so, we need a few hacks.
+        #-------------------------------------------------------------
         COLAB = 'google.colab' in sys.modules
         
-        # Check to see if versions have been created. 
+        #-------------------------------------------------------------
+        # Check if versions have been created. 
+        #-------------------------------------------------------------
         if len(self.versions) == 0:
             out = '<b><font size=5>No Versions to Display</font></b>\n'
             out += '<p>No versions have been generated.</p>'
             return out
         
-        # Determine number to display 
+        #-------------------------------------------------------------
+        # Determine number of questions to display 
+        #-------------------------------------------------------------
         if limit is None: limit = len(self.versions) 
         limit = min(limit, len(self.versions))
         
+        #-------------------------------------------------------------
         # Add "Displaying Versions" Header
+        #-------------------------------------------------------------
         out = '<b><font size=5>Displaying Versions</font></b>'
-    
-        # Add Versions
+
+        #-------------------------------------------------------------
+        # Add Versions to the output
+        #-------------------------------------------------------------
         for i in range(limit):
-            # Just add the version text with no processing if in Jupyter
-            jupyter_text = self.versions[i]['text']
+            # Obtain version text. This is used when not in Colab
+            question_text = self.versions[i]['text']
                         
             # Mess around with Dollar Signs to be able to use Katex in Colab. 
-            colab_text = jupyter_text.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
+            colab_text = question_text.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
             colab_text = colab_text.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
             colab_text = colab_text.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
             colab_text = colab_text.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
             
             #-------------------------------------------------
-            # Display the actual version (without answers)
+            # Display the version text (without answers)
             #-------------------------------------------------
             seed_text = f'  <font size=2>({self.versions[i]["version_seed"]})</font>' if show_seeds else ''
             
@@ -547,17 +628,15 @@ class Question:
             out += f'<br/><br/><hr><p>'
             out += f'<b><font size=4>Version {i+1}</font></b>{seed_text}<br/>'
             
-            # Add Either Colab or Jupyter text, as needed
+            # Add Either Colab or Standard text, as needed
             if COLAB:   
                 out += f'<font size="{size}">{colab_text}</font></p>'
             else:
-                out += f'<font size="{size}">{jupyter_text}</font></p>'
-            
+                out += f'<font size="{size}">{question_text}</font></p>'
             self.versions[i]['colab_text'] = colab_text
-            self.versions[i]['jupyter_text'] = jupyter_text
             
             #-----------------------------------------------
-            # Add the Answers
+            # Display the Answers
             #-----------------------------------------------
             out += f'<p><b><font size={size}>Answer Options</font></b></p>'
             
@@ -605,28 +684,47 @@ class Question:
             elif self.type == 'MT':
                 for ao in answer_options:
                     out += f'{ao}'    
+        
+        #-------------------------------------------------------------
+        # Close out the HTML for the current version
+        #-------------------------------------------------------------
         out += '<br/><br/><hr>'
+        
         return out
     
     def display_versions(self, size=3, limit=None, compact_answers=False, show_seeds=False):    
         from IPython.display import HTML, display, Markdown, Latex, Javascript
         import sys
         
+        #-------------------------------------------------------------
+        # Check if Colab. If so, we need a hack to render LaTex
+        #-------------------------------------------------------------
         COLAB = 'google.colab' in sys.modules
         if COLAB: # Part of hack to make Colab render LaTex
             display(Latex(""))
         
+        #-------------------------------------------------------------
+        # Generate HTML output
+        #-------------------------------------------------------------
         out = self.create_display_html(
             size=size, limit=limit, compact_answers=compact_answers, show_seeds=show_seeds
         )
         display(HTML(out))
         
-        # This is a hack used to fix display in Colab
+        #-------------------------------------------------------------
+        # More Colab hacking. Uses katex.
+        #-------------------------------------------------------------
         if COLAB: 
             from apgen.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
 
+
+
     def display_versions_OLD(self, size=3, limit=None, compact_answers=False, show_seeds=False):
+        #-------------------------------------------------------------
+        # This was deprecated in early 2025. Should be deleted eventually. 
+        #-------------------------------------------------------------
+        
         from IPython.display import HTML, display, Markdown, Latex, Javascript
         import sys
         COLAB = 'google.colab' in sys.modules
@@ -651,10 +749,10 @@ class Question:
         for i in range(limit):
             
             # Just add the version text with no processing if in Jupyter
-            jupyter_text = self.versions[i]['text']
+            question_text = self.versions[i]['text']
                         
             # Mess around with Dollar Signs to be able to use Katex in Colab. 
-            colab_text = jupyter_text.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
+            colab_text = question_text.replace(r'\$', '__DOLLAR__SIGN__')   # Replace escaped dollar signs. 
             colab_text = colab_text.replace(r'$$', '__DEQN__')           # Replace $$ with __$$__ to be used with Katex
             colab_text = colab_text.replace(r'$', '__EQN__')             # Replace $ with __$__ to be used with Katex
             colab_text = colab_text.replace('__DOLLAR__SIGN__', r'$')    # Put escaped dollar signs back in as $. 
@@ -669,11 +767,11 @@ class Question:
             if COLAB:   # Display colab_text
                 display(HTML(f'<font size="{size}">{colab_text}</font><br/>'))
             else:
-                display(HTML(f'<font size="{size}">{jupyter_text}</font><br/>'))
+                display(HTML(f'<font size="{size}">{question_text}</font><br/>'))
                 
                 
             self.versions[i]['colab_text'] = colab_text
-            self.versions[i]['jupyter_text'] = jupyter_text
+            #self.versions[i]['jupyter_text'] = question_text
                         
             #-----------------------------------------------
             # Display Answers
@@ -737,9 +835,9 @@ class Question:
             from apgen.autorender import katex_autorender_min
             display(Javascript(katex_autorender_min))
     
-    def version_details(self, i, flags=''):
+    def version_details(self, i, show_colab_text=False, show_qti_text=False):
         v = self.versions[i]
-        version_details(v, flags=flags)
+        version_details(v, show_colab_text, show_qti_text)
            
     def generate_qti(self, path='', overwrite=True, shuffle=True, save_template=False, seeds='hide', create_files=True, verbose=True):
         from apgen.qti_convert import makeQTI
@@ -910,33 +1008,36 @@ def colab_process_template(qt, num_versions, num_to_display, compact_answers, ge
 
     return q
 
-def version_details(v, flags=''):
+def version_details(v, show_colab_text=False, show_qti_text=False):
         from IPython.display import display, HTML
         
         display(HTML(f'<text size=5><b>Seed</b></text>'))
         print(v["version_seed"])
         display(HTML(f'<text size=5><b>Status</b></text>'))
         print(v["status"])
+        print()
         
         display(HTML('<text size=5><b>Text Objects</b></text>'))
         if 'text' in v: 
             display(HTML('<text size=4><code>text</code></text>'))
             print(v['text'])
-        if 'colab_text' in v and 'c' in flags:
+        
+        if 'colab_text' in v and show_colab_text:
             display(HTML('<text size=5><code>colab_text</code></text>'))
             print(v['colab_text'])
-        if 'jupyter_text' in v and 'c' in flags:
-            display(HTML('<text size=5><code>jupyter_text</code></text>'))
-            print(v['jupyter_text'])    
-        if 'qti_text' in v and 'q' in flags:
+        
+        if 'qti_text' in v and show_qti_text:
             display(HTML('<text size=5><code>qti_text</code></text>'))
             print(v['qti_text'])
+            print()
         
         display(HTML('<text size=5><b>Variables</b></text>'))
         for k,val in v['var_defns'].items():
             display(HTML(f'<code>{k} - {val}</code>'))
             
-        display(HTML('<text size=5><b>Need to add answer options.</b></text>'))
+        print()
+        display(HTML('<text size=5><b>Answer Options</b></text>'))
+        print(v['answer_options'])
         
 
 def DISPLAY_DELETE(x, scope):
