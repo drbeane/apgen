@@ -37,7 +37,7 @@ def SAMPLE(start, stop, step, exclude=None, repeat=True, size=None,
                 break  
             
             # Sample a single value. 
-            x = np.random.choice(options)
+            x = np.random.choice(options).item()
             sample_values.append(x)
             
             # Remove value from options if sampling w/o replacement
@@ -655,7 +655,7 @@ def TVM_SOLVER(N=None, I=None, PV=None, PMT=None, FV=None, max_iter=10000):
     if N is None:
         x1 = -PV - PMT / I
         x2 = FV - PMT / I
-        n = np.log(x1/x2) / np.log(v)
+        n = np.log(x1/x2).item() / np.log(v).item()
         return round(n, 10)
     
     an = ANNUITY_PV(N, I)

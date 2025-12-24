@@ -18,7 +18,7 @@ class Question:
         self.type = 'MC'
         self.margin = '0'
         self.error_log={}
-        self.attempt_counts = {}  # Used during version generation
+        self.attempt_counts = {'success':0, 'duplicate':0, 'error':0, 'condition':0}  # Used during version generation
         
         # Set default delimiters. This can be changed in the CONFIG section of the template.
         self.var_delim = '[[ ]]'     
