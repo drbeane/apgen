@@ -518,7 +518,7 @@ class Question:
         #-------------------------------------------------------------
         for k, v in scope.items():
             if isinstance(v, float):
-                scope[k] = round(v, 12)
+                scope[k] = round(v, 10)
         
         #-------------------------------------------------------------
         # Check conditions, return if invalid

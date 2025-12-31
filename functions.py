@@ -20,7 +20,7 @@ def SAMPLE(start, stop, step, exclude=None, repeat=True, size=None,
         sample_values = []   # List to store sampled values
         
         # Build list of options
-        options = np.arange(start, stop+step, step).round(12).tolist()
+        options = np.arange(start, stop+step, step).round(10).tolist()
         
         # Remove exluded values
         if exclude is not None:
