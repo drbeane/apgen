@@ -293,6 +293,7 @@ class Question:
         
         
         # Create Progress Bar and Range
+        n = min(n, self.max_versions)
         if progress_bar == True:
             my_range = tqdm(range(n))
         else:
