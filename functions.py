@@ -115,7 +115,8 @@ def SELECT(values, size=None, repeat=True):
     
     
     
-    return np.random.choice(values, replace=repeat)
+    print('Unable to find values satifying the given criteria.')      
+    return None
     
 def COND(max_attempts=1000, conds=[], **kwargs):
     
@@ -728,9 +729,10 @@ if __name__ == '__main__':
     #print(NOT_EXACT_TO(x, 7))
     
     
-    i = TVM_SOLVER(N=10, I=None, PV=-100, PMT=10, FV=50)
+    x = SELECT([1,2,3,4,5,6,7,8], size=9, 
+               repeat=False)
     
-    print(i)
+    print(x)
     
     
     '''
