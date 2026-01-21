@@ -72,8 +72,49 @@ def RANGE(start, stop, step, exclude=None, repeat=True, size=None,
     return SAMPLE(start=start, stop=stop, step=step, exclude=exclude, repeat=repeat, 
            size=size, min_diff=min_diff, max_attempts=max_attempts)    
 
-def SELECT(values, repeat=True):
+def SELECT(values, size=None, repeat=True):
     import numpy as np
+    
+    # Determine the number of values to sample. 
+    n = 1 if size is None else np.prod(size)
+    
+    # TO DO: Raise an error if n is larger than num values
+    
+    options = list(options)
+    sample_values = []   # List to store sampled values
+    
+    # Loop until an appropriate collection is found
+    failed = False
+    for _ in range(n):
+        
+        if len(options) == 0:
+            failed = True
+            break 
+        
+        # Sample a single value. 
+        x = np.random.choice(options).item()
+        sample_values.append(x)
+            
+        # Remove value from options if sampling w/o replacement
+        if repeat == False:
+            options.remove(x)
+        
+    #----------------------------------------------------------------
+    # Return values if they were found. Otherwise, restart the loop. 
+    #----------------------------------------------------------------                
+    if failed == False:
+                    
+        if size is None:
+            return sample_values[0]
+
+        if np.array(size).ndim == 0:
+            return sample_values
+
+        if np.array(size).ndim == 1:
+            return np.array(sample_values).reshape(size)
+    
+    
+    
     return np.random.choice(values, replace=repeat)
     
 def COND(max_attempts=1000, conds=[], **kwargs):
