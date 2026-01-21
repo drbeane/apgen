@@ -80,7 +80,7 @@ def SELECT(values, size=None, repeat=True):
     
     # TO DO: Raise an error if n is larger than num values
     
-    options = list(options)
+    options = list(values)
     sample_values = []   # List to store sampled values
     
     # Loop until an appropriate collection is found
