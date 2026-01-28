@@ -683,8 +683,13 @@ class Question:
             
             # Matching
             elif self.type == 'MT':
-                for ao in answer_options:
-                    out += f'{ao}'    
+                ans_str = ''
+                for i, ao in enumerate(answer_options):
+                    ans_str += ao
+                    ans_str += '&nbsp'*12 if compact_answers else '<br/>\n'
+                out += ans_str
+                #for ao in answer_options:
+                #    out += f'{ao}'    
         
         #-------------------------------------------------------------
         # Close out the HTML for the current version
